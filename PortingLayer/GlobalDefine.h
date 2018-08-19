@@ -10,7 +10,10 @@
 #include <task.h>
 #include <event_groups.h>
 
-#define PixelBaseCounter 14
+//test
+#define PixelBaseCounter 3
+// #define PixelBaseCounter 14
+
 #define SpiCounter 3
 #define UartCounter 2
 #define TimeoutMs 1

@@ -28,10 +28,10 @@ extern "C"
 
 
 #define USE_FATFS
-#define SendToPC_WIFI
 #define USE_SPI
+#define USE_SendToPc
 
-#ifdef USE_SPI
+#ifdef SendToPCByUartDriver
 
 #include "../SpiDriver/SpiDriver.h"
 typedef SpiSlaver TransmitHandle;
@@ -59,15 +59,11 @@ typedef SpiSlaver TransmitHandle;
 void PixelBase_SetSaveDirPath(char *dirPath);
 
 
-#ifdef USE_RTOS
 
-#include <FreeRTOS.h>
-#include <task.h>
 
-#endif
-
-#ifdef SendToPC_WIFI
-typedef  void* SendToPCHandle;
+#ifdef SendToPCByUartDriver
+#include "../UartDriver/UartDriver.h"
+typedef  UartDriver SendToPCHandle;
 #endif
 
 
