@@ -2,272 +2,320 @@
 
 SpiMaster *spiMasterList[SpiCounter] = {0x00};
 
-HAL_StatusTypeDef SpiMaster_Init(SpiMaster *master, SPI_HandleTypeDef *spiHandle, uint32_t index)
-{
-	HAL_StatusTypeDef temp;
-    
-	spiMasterList[index] = master;
-
 #ifdef USE_RTOS
-	master->eventGroup = xEventGroupCreate();
-#endif
-	
-	master->currentSlaver = NULL;
-	master->spiHandle = spiHandle;
-	master->status = DriverStatus_Init;
-	
-	
-	
-    temp = HAL_SPI_Init(master->spiHandle);
-	
-	if (temp != HAL_OK)
-    {
-        master->status = DriverStatus_Error_Init;
 
-        return temp;
-	}
-	
-    master->status = DriverStatus_Run;
-	master->transmitStatus = TransmitFree | ReceiveFree | TransmitCompleted | ReceiveCompleted;
-	SpiMaster_Unlock(master);
-    return temp;
+inline static bool SpiMaster_Lock(SpiMaster *driver, uint8_t direction, uint32_t ms)
+{
+	return (xEventGroupWaitBits(driver->eventGroup, Transmit | Receive, Transmit | Receive, pdTRUE, pdMS_TO_TICKS(ms)) & (Transmit | Receive)) > 0;
 }
 
-HAL_StatusTypeDef SpiMaster_ReInit(SpiMaster *master, SPI_HandleTypeDef *spiHandle)
+inline static void SpiMaster_Unlock(SpiMaster *driver, uint8_t direction)
+{
+	xEventGroupSetBits(driver->eventGroup, Transmit | Receive);
+}
+
+#endif
+
+HAL_StatusTypeDef SpiMaster_Init(SpiMaster *driver, SPI_HandleTypeDef *handle, uint32_t index)
+{
+	HAL_StatusTypeDef temp;
+
+#ifdef USE_RTOS
+	driver->eventGroup = xEventGroupCreate();
+#endif
+
+	SpiMaster_EndTransmit(driver, Transmit | Receive);
+	SpiMaster_PrepareForTransmit(driver, Transmit | Receive, 0);
+
+	driver->currentSlaver = NULL;
+	driver->handle = handle;
+	driver->status = DriverStatus_Init;
+
+	temp = HAL_SPI_Init(driver->handle);
+
+	if (temp != HAL_OK)
+	{
+		driver->status = DriverStatus_Error_Init;
+		SpiMaster_EndTransmit(driver, Transmit | Receive);
+		return temp;
+	}
+
+	driver->status = DriverStatus_Run;
+	driver->transmitStatus = TransmitFree | ReceiveFree | TransmitCompleted | ReceiveCompleted;
+
+	spiMasterList[index] = driver;
+
+	SpiMaster_EndTransmit(driver, Transmit | Receive);
+	return temp;
+}
+
+HAL_StatusTypeDef SpiMaster_ReInit(SpiMaster *driver, SPI_HandleTypeDef *handle, uint32_t forceTimeout)
 {
 	uint32_t i;
 	HAL_StatusTypeDef temp;
-	
-	temp = SpiMaster_DeInit(master);
-    if (temp != HAL_OK)
-    {
-        return temp;
-    }
-	
-	if (spiHandle != NULL && master->spiHandle != spiHandle)
+
+	temp = SpiMaster_DeInit(driver, forceTimeout);
+	if (temp != HAL_OK)
 	{
-		master->spiHandle->Init.Mode = spiHandle->Init.Mode;
-		master->spiHandle->Init.Direction = spiHandle->Init.Direction;
-		master->spiHandle->Init.DataSize = spiHandle->Init.DataSize;
-		master->spiHandle->Init.CLKPolarity = spiHandle->Init.CLKPolarity;
-		master->spiHandle->Init.CLKPhase = spiHandle->Init.CLKPhase;
-		master->spiHandle->Init.NSS = spiHandle->Init.NSS;
-		master->spiHandle->Init.BaudRatePrescaler = spiHandle->Init.BaudRatePrescaler;
-		master->spiHandle->Init.FirstBit = spiHandle->Init.FirstBit;
-		master->spiHandle->Init.TIMode = spiHandle->Init.TIMode;
-		master->spiHandle->Init.CRCCalculation = spiHandle->Init.CRCCalculation;
-		master->spiHandle->Init.CRCPolynomial = spiHandle->Init.CRCPolynomial;
+		return temp;
+	}
+
+	if (handle != NULL && driver->handle != handle)
+	{
+		driver->handle->Init.Mode = handle->Init.Mode;
+		driver->handle->Init.Direction = handle->Init.Direction;
+		driver->handle->Init.DataSize = handle->Init.DataSize;
+		driver->handle->Init.CLKPolarity = handle->Init.CLKPolarity;
+		driver->handle->Init.CLKPhase = handle->Init.CLKPhase;
+		driver->handle->Init.NSS = handle->Init.NSS;
+		driver->handle->Init.BaudRatePrescaler = handle->Init.BaudRatePrescaler;
+		driver->handle->Init.FirstBit = handle->Init.FirstBit;
+		driver->handle->Init.TIMode = handle->Init.TIMode;
+		driver->handle->Init.CRCCalculation = handle->Init.CRCCalculation;
+		driver->handle->Init.CRCPolynomial = handle->Init.CRCPolynomial;
 	}
 	for (i = 0; i < SpiCounter; ++i)
 	{
-		if (spiMasterList[i] == master)
+		if (spiMasterList[i] == driver)
 		{
 			break;
 		}
 	}
-    return SpiMaster_Init(master, master->spiHandle, i);
+	return SpiMaster_Init(driver, driver->handle, i);
 }
 
-HAL_StatusTypeDef SpiMaster_DeInit(SpiMaster *master)
+HAL_StatusTypeDef SpiMaster_DeInit(SpiMaster *driver, uint32_t forceTimeout)
 {
-    HAL_StatusTypeDef temp;
-    uint32_t timeout = 0xff;
-	
+	HAL_StatusTypeDef temp;
 
-	
-    while (master->currentSlaver != NULL && timeout != 0)
-    {
+	if (!SpiMaster_PrepareForTransmit(driver, Transmit | Receive, forceTimeout))
+	{
+		if (driver->currentSlaver != NULL)
+		{
+			SpiSlaver_EndTransmit(driver->currentSlaver, Transmit | Receive);
+		}
+		else
+		{
+			SpiMaster_EndTransmit(driver, Transmit | Receive);
+		}
+		SpiMaster_PrepareForTransmit(driver, Transmit | Receive, forceTimeout);
+	}
+
+	driver->status = DriverStatus_DeInit;
+	temp = HAL_SPI_DeInit(driver->handle);
+	driver->transmitStatus = 0x00;
+
+	if (temp != HAL_OK)
+	{
+		driver->status = DriverStatus_Error_DeInit;
+	}
+
+	return temp;
+}
+
+inline SpiSlaver *SpiMaster_CurrentSlaver(SpiMaster *driver)
+{
+	return driver->currentSlaver;
+}
+
+inline HAL_StatusTypeDef SpiMaster_Transmit(SpiMaster *driver, const uint8_t *pData, uint16_t size, uint32_t ms)
+{
+	driver->transmitStatus |= TransmitCompleted;
 #ifdef USE_RTOS
-		vTaskDelay(pdMS_TO_TICKS(1));
-#else
-        HAL_Delay(1);
+	xEventGroupSetBits(driver->eventGroup, TransmitCompleted);
 #endif
-        timeout --;
-    }
-	
-    if (timeout == 0)
-    {
-        SpiMaster_Released(master, 0);
-    }
-
-	
-    master->status = DriverStatus_DeInit;
-    temp = HAL_SPI_DeInit(master->spiHandle);
-	master->transmitStatus = 0x00;
-	
-    if (temp != HAL_OK)
-    {
-        master->status = DriverStatus_Error_DeInit;
-    }
-
-    return temp;
+	return HAL_SPI_Transmit(driver->handle, (uint8_t *)(pData), size, ms);
+}
+inline HAL_StatusTypeDef SpiMaster_TransmitByDMA(SpiMaster *driver, const uint8_t *pData, uint16_t size)
+{
+	driver->transmitStatus &= (~TransmitCompleted);
+	return HAL_SPI_Transmit_DMA(driver->handle, (uint8_t *)(pData), size);
 }
 
-
-
-void SpiMaster_Released(SpiMaster *master, SpiSlaver *slaver)
+inline HAL_StatusTypeDef SpiMaster_Receive(SpiMaster *driver, uint8_t *pData, uint16_t size, uint32_t ms)
 {
-    if (slaver == NULL)
-    {
-        SpiSlaver_Released(master->currentSlaver);
-		SpiMaster_ReInit(master, master->spiHandle);
-    }
-    else
-    {
-        SpiSlaver_Released(master->currentSlaver);
-    }
-}
-
-bool SpiMaster_WaitForTransmit(SpiMaster *master, uint8_t direction, uint32_t timeoutMs)
-{
-	
+	driver->transmitStatus |= ReceiveCompleted;
 #ifdef USE_RTOS
+	xEventGroupSetBits(driver->eventGroup, ReceiveCompleted);
+#endif
+	return HAL_SPI_Receive(driver->handle, pData, size, ms);
+}
+inline HAL_StatusTypeDef SpiMaster_ReceiveByDMA(SpiMaster *driver, uint8_t *pData, uint16_t size)
+{
+	driver->transmitStatus &= (~ReceiveCompleted);
+	return HAL_SPI_Transmit_DMA(driver->handle, pData, size);
+}
 
-	if (master->transmitStatus & (direction << 2))
+inline bool SpiMaster_PrepareForTransmit(SpiMaster *driver, uint8_t direction, uint32_t ms)
+{
+	direction = Transmit | Receive;
+#ifdef USE_RTOS
+	if (SpiMaster_Lock(driver, direction, ms))
 	{
+		driver->transmitStatus |= direction;
 		return true;
-	}
-	if (xEventGroupWaitBits((master)->eventGroup, direction << 2, direction << 2, pdFALSE, pdMS_TO_TICKS(timeoutMs)) & direction << 2)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
 	}
 #else
-	while (master->transmitStatus & direction != 0 && timeoutMs != 0)
+
+	for (; ms > 0; --ms)
 	{
+		if ((driver->transmitStatus & direction) == direction)
+		{
+			driver->transmitStatus |= direction;
+			return true;
+		}
 		HAL_Delay(1);
-		-- timeoutMs;
 	}
-	if (timeoutMs == 0)
-	{
-		return false;
-	}
-	else
-	{
-		return true;
-	};
 #endif
+	return false;
 }
-
-//#ifdef USE_RTOS
-//bool SpiMaster_Lock(SpiMaster *master, uint32_t ms)
-//{ 	
-
-//	for (; ms > 0 && (((uint16_t)(xEventGroupGetBits(master->eventGroup)) & (uint16_t)(TransmitFree | ReceiveFree)) == 0); --ms)
-//	{
-//	 
-//	}
-//	if (ms > 0)
-//	{
-//		xEventGroupClearBits((master)->eventGroup, TransmitFree | ReceiveFree);
-//		return true;
-//	}
-//		
-//	return false;
-//}
-
-//#endif
-
-void SpiSlaver_Init(SpiSlaver *slaver, SpiMaster *master, GPIO_TypeDef *port, uint16_t pin)
+inline bool SpiMaster_EndTransmit(SpiMaster *driver, uint8_t direction)
 {
-    GPIO_InitTypeDef csnPinInitData;
-
-    slaver->master = master;
-    slaver->csnPin.port = port;
-    slaver->csnPin.pin = pin;
-
-    csnPinInitData.Pin = pin;
-    csnPinInitData.Mode = GPIO_MODE_OUTPUT_PP;
-    csnPinInitData.Pull = GPIO_PULLUP;
-    csnPinInitData.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GpioPin_Init(&(slaver->csnPin), &csnPinInitData);
-
-    GpioPin_OutputHight(&(slaver->csnPin), true);
-}
-
-
-
-bool SpiSlaver_Selected(SpiSlaver *slaver, uint32_t ms)
-{
-	if (slaver->master->status != DriverStatus_Run)
-	{
-		return false;
-	}
-	
+	direction = Transmit | Receive;
+	driver->transmitStatus &= (~direction);
+	driver->currentSlaver = NULL;
 #ifdef USE_RTOS
-	//bool y = xEventGroupWaitBits(slaver->master->eventGroup, TransmitFree | ReceiveFree, TransmitFree | ReceiveFree, pdFALSE, pdMS_TO_TICKS(ms)) & (TransmitFree | ReceiveFree);
-	
-	if (!SpiMaster_Lock(slaver->master, TransmitFree | ReceiveFree, ms))
-	{
-		return false;
-	}
-#else
-	if (slaver->master->currentSlaver != NULL)
-	{
-		return false;
-	}
+	SpiMaster_Unlock(driver, direction);
 #endif
-	
-	slaver->master->currentSlaver = slaver;
-	GpioPin_OutputHight(&(slaver->csnPin), false);
 	return true;
 }
 
-bool SpiSlaver_Released(SpiSlaver *slaver)
+inline bool SpiMaster_WaitForTransmit(SpiMaster *driver, uint8_t direction, uint32_t ms)
 {
-	
-	if (slaver != slaver->master->currentSlaver)
+#ifdef USE_RTOS
+	return xEventGroupWaitBits(driver->eventGroup, direction << 2, direction << 2, pdTRUE, pdMS_TO_TICKS(ms)) & (direction << 2);
+#else
+	for (; ms > 0; --ms)
+	{
+		if ((driver->transmitStatus & (direction << 2)) == (direction << 2))
+		{
+			return true;
+		}
+		HAL_Delay(1);
+	}
+	return false;
+#endif
+}
+
+
+
+
+void SpiSlaver_Init(SpiSlaver *slaver, SpiMaster *master, GPIO_TypeDef *port, uint16_t pin)
+{
+	GPIO_InitTypeDef csnPinInitData;
+
+	slaver->master = master;
+	slaver->csnPin.port = port;
+	slaver->csnPin.pin = pin;
+
+	csnPinInitData.Pin = pin;
+	csnPinInitData.Mode = GPIO_MODE_OUTPUT_PP;
+	csnPinInitData.Pull = GPIO_PULLUP;
+	csnPinInitData.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+	GpioPin_Init(&(slaver->csnPin), &csnPinInitData);
+
+	GpioPin_OutputHight(&(slaver->csnPin), true);
+}
+
+inline bool SpiSlaver_PrepareForTransmit(SpiSlaver *slaver, uint8_t direction, uint32_t ms)
+{
+	if (SpiMaster_PrepareForTransmit(slaver->master, direction, ms))
+	{
+		GpioPin_OutputHight(&(slaver->csnPin), false);
+		slaver->master->currentSlaver = slaver;
+		return true;
+	}
+	return false;
+}
+inline bool SpiSlaver_EndTransmit(SpiSlaver *slaver, uint8_t direction)
+{
+	if (SpiMaster_CurrentSlaver(slaver->master) != slaver)
 	{
 		return false;
 	}
 	GpioPin_OutputHight(&(slaver->csnPin), true);
-	slaver->master->currentSlaver = NULL;
-	
-#ifdef USE_RTOS
-	slaver->master->currentTaskHandle = NULL;
-	SpiMaster_Unlock(slaver->master);
-#endif
-	
-	return true;
+
+	return SpiMaster_EndTransmit(slaver->master, direction);
 }
+
+inline bool SpiSlaver_WaitForTransmit(SpiSlaver *slaver, uint8_t direction, uint32_t ms)
+{
+	return SpiMaster_WaitForTransmit(slaver->master, direction, ms);
+}
+
+inline HAL_StatusTypeDef SpiSlaver_Transmit(SpiSlaver *slaver, const uint8_t *pData, uint16_t size, uint32_t ms)
+{
+	return SpiMaster_Transmit(slaver->master, pData, size, ms);
+}
+inline HAL_StatusTypeDef SpiSlaver_TransmitByDMA(SpiSlaver *slaver, const uint8_t *pData, uint16_t size)
+{
+	return SpiMaster_TransmitByDMA(slaver->master, pData, size);
+}
+
+inline HAL_StatusTypeDef SpiSlaver_Receive(SpiSlaver *slaver, uint8_t *pData, uint16_t size, uint32_t ms)
+{
+	return SpiMaster_Receive(slaver->master, pData, size, ms);
+}
+inline HAL_StatusTypeDef SpiSlaver_ReceiveByDMA(SpiSlaver *slaver, uint8_t *pData, uint16_t size)
+{
+	return SpiMaster_ReceiveByDMA(slaver->master, pData, size);
+}
+
+
+
+
+
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-	uint32_t i;
+#ifdef USE_RTOS
 	BaseType_t temp = pdFALSE;
-	for (i = 0; i < SpiCounter; --i)
+#endif
+
+	uint32_t i = 0;
+	for (; i < SpiCounter; ++i)
 	{
-		if (spiMasterList[i] != 0 && spiMasterList[i]->spiHandle == hspi)
+		if (spiMasterList[i] != 0 && spiMasterList[i]->handle == hspi)
 		{
+#ifdef USE_RTOS
 			if (xEventGroupSetBitsFromISR(spiMasterList[i]->eventGroup, TransmitCompleted, &temp) != pdPASS)
 			{
 				__breakpoint(0);
 			}
+#endif
+			spiMasterList[i]->transmitStatus |= TransmitCompleted;
+			break;
 		}
 	}
+
+#ifdef USE_RTOS
 	portYIELD_FROM_ISR(temp);
+#endif
 }
 
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-	uint32_t i;
+#ifdef USE_RTOS
 	BaseType_t temp = pdFALSE;
-	for (i = 0; i < SpiCounter; --i)
+#endif
+
+	uint32_t i = 0;
+	for (; i < SpiCounter; ++i)
 	{
-		if (spiMasterList[i] != 0 && spiMasterList[i]->spiHandle == hspi)
+		if (spiMasterList[i] != 0 && spiMasterList[i]->handle == hspi)
 		{
+#ifdef USE_RTOS
 			if (xEventGroupSetBitsFromISR(spiMasterList[i]->eventGroup, ReceiveCompleted, &temp) != pdPASS)
 			{
 				__breakpoint(0);
 			}
-			
+#endif
+			spiMasterList[i]->transmitStatus |= ReceiveCompleted;
+			break;
 		}
 	}
+
+#ifdef USE_RTOS
 	portYIELD_FROM_ISR(temp);
+#endif
 }
-
-
-

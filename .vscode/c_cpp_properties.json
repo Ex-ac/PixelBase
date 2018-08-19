@@ -1,0 +1,13 @@
+{
+    "configurations": [
+        {
+            "name": "STM32Fxx",
+			"browse": {
+				"path": [
+					"${workspaceRoot}"
+				]
+			}
+        }
+    ],
+    "version": 4
+}

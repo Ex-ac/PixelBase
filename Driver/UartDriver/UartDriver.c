@@ -5,50 +5,54 @@ UartDriver *uartDriverList[UartCounter];
 #ifdef USE_RTOS
 inline static bool UartDriver_Lock(UartDriver *driver, uint8_t direction, uint32_t ms)
 {
-	return xEventGroupWaitBits(driver->eventGroup, direction, direction, pdTRUE, pdMS_TO_TICKS(ms)) & direction) > 0
+	return (xEventGroupWaitBits(driver->eventGroup, direction, direction, pdTRUE, pdMS_TO_TICKS(ms)) & direction) > 0;
 }
 
 inline static void UartDriver_Unlock(UartDriver *driver, uint8_t direction)
 {
-	xEventGroupSetBits((driver)->eventGroup, direction);
+	xEventGroupSetBits(driver->eventGroup, direction);
 }
 
 #endif
 
-HAL_StatusTypeDef UartDriver_Init(UartDriver *driver, UART_HandleTypeDef *handle, index)
+HAL_StatusTypeDef UartDriver_Init(UartDriver *driver, UART_HandleTypeDef *handle, uint32_t index)
 {
 	HAL_StatusTypeDef temp;
-	driver->handle = handle;
-	UartDriverList
+	
+
 #ifdef USE_RTOS
 		driver->eventGroup = xEventGroupCreate();
 #endif
+
 	UartDriver_EndTransmit(driver, Transmit | Receive);
 	UartDriver_PrepareForTransmit(driver, Transmit | Receive, 0);
 
 	driver->status = DriverStatus_Init;
-
+	driver->handle = handle;
 	temp = HAL_UART_Init(driver->handle);
 
 	if (temp != HAL_OK)
 	{
 		driver->status = DriverStatus_Error_DeInit;
+		UartDriver_EndTransmit(driver, Transmit | Receive);
 		return temp;
 	}
 
-	master->status = DriverStatus_Run;
+	driver->status = DriverStatus_Run;
 
 	driver->transmitStatus = TransmitFree | ReceiveFree | TransmitCompleted | ReceiveCompleted;
 
+	uartDriverList[index] = driver;
 	UartDriver_EndTransmit(driver, Transmit | Receive);
 	return temp;
 }
-HAL_StatusTypeDef UartDriver_ReInit(UartDriver *driver, uint32_t forceTimeout)
+
+HAL_StatusTypeDef UartDriver_ReInit(UartDriver *driver, UART_HandleTypeDef *handle, uint32_t forceTimeout)
 {
 	uint32_t i;
 	HAL_StatusTypeDef temp;
 
-	temp = UartDriver_DeInit(driver->handle, forceTimeout);
+	temp = UartDriver_DeInit(driver, forceTimeout);
 
 	if (temp != HAL_OK)
 	{
@@ -81,11 +85,11 @@ HAL_StatusTypeDef UartDriver_DeInit(UartDriver *driver, uint32_t forceTimeout)
 {
 	HAL_StatusTypeDef temp;
 
-	if (!UartDriver_PrepareForTransmit(driver, Transmit | Receive, force)) //等待释放
+	if (!UartDriver_PrepareForTransmit(driver, Transmit | Receive, forceTimeout)) //等待释放
 	{
 		//可以添加一个较高的优先级，会添加必要的事务线程，使用线程任务是十分的低效，要频发的切换任务
 		UartDriver_EndTransmit(driver, Transmit | Receive);				  //强制释放
-		UartDriver_PrepareForTransmit(driver, Transmit | Receive, force); //强占，避免在此时去被使用。
+		UartDriver_PrepareForTransmit(driver, Transmit | Receive, forceTimeout); //强占，避免在此时去被使用。
 	}
 
 	driver->status = DriverStatus_DeInit;
@@ -107,7 +111,8 @@ inline HAL_StatusTypeDef UartDriver_Transmit(UartDriver *driver, const uint8_t *
 #endif
 	return HAL_UART_Transmit(driver->handle, (uint8_t *)(pData), size, ms);
 }
-inline HAL_StatusTypeDef UartDriver_TransmitByDMA(UartDriver *driver, const uint8_t *pData, uint16_t size, uint32_t ms)
+
+inline HAL_StatusTypeDef UartDriver_TransmitByDMA(UartDriver *driver, const uint8_t *pData, uint16_t size)
 {
 	driver->transmitStatus &= (~TransmitCompleted);
 	return HAL_UART_Transmit_DMA(driver->handle, (uint8_t *)(pData), size);
@@ -121,15 +126,16 @@ inline HAL_StatusTypeDef UartDriver_Receive(UartDriver *driver, uint8_t *pData, 
 #endif
 	return HAL_UART_Receive(driver->handle, pData, size, ms);
 }
-inline HAL_StatusTypeDef UartDriver_ReceiveByDMA(UartDriver *driver, uint8_t *pData, uint16_t size, uint32_t ms)
+
+inline HAL_StatusTypeDef UartDriver_ReceiveByDMA(UartDriver *driver, uint8_t *pData, uint16_t size)
 {
 	driver->transmitStatus &= (~ReceiveCompleted);
 	return HAL_UART_Transmit_DMA(driver->handle, pData, size);
 }
 
-bool UartDriver_PrepareForTransmit(UartDriver *driver, uint8_t direction, uint32_t ms)
+inline bool UartDriver_PrepareForTransmit(UartDriver *driver, uint8_t direction, uint32_t ms)
 {
-#ifndef USE_RTOS
+#ifdef USE_RTOS
 	if (UartDriver_Lock(driver, direction, ms))
 	{
 		driver->transmitStatus |= direction;
@@ -149,19 +155,20 @@ bool UartDriver_PrepareForTransmit(UartDriver *driver, uint8_t direction, uint32
 #endif
 	return false;
 }
-bool UartDriver_EndTransmit(UartDriver *driver, uint8_t direction)
+
+inline bool UartDriver_EndTransmit(UartDriver *driver, uint8_t direction)
 {
 	driver->transmitStatus &= (~direction);
-#ifndef USE_RTOS
+#ifdef USE_RTOS
 	UartDriver_Unlock(driver, direction);
 #endif
 	return true;
 }
 
-bool UartDriver_WaitForTransmit(UartDriver *driver, uint8_t direction, uint32_t ms)
+inline bool UartDriver_WaitForTransmit(UartDriver *driver, uint8_t direction, uint32_t ms)
 {
 #ifdef USE_RTOS
-	return xEventGroupWaitBits(driver->handle, direction << 2, direction << 2, pdTRUE, pdMS_TO_TICKS(ms)) & (direction << 2);
+	return xEventGroupWaitBits(driver->eventGroup, direction << 2, direction << 2, pdTRUE, pdMS_TO_TICKS(ms)) & (direction << 2);
 #else
 	for (; ms > 0; --ms)
 	{
@@ -171,8 +178,9 @@ bool UartDriver_WaitForTransmit(UartDriver *driver, uint8_t direction, uint32_t 
 		}
 		HAL_Delay(1);
 	}
-#endif
 	return false;
+#endif
+	
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
@@ -181,18 +189,18 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 	BaseType_t temp = pdFALSE;
 #endif
 
-	uint32_t i = UartCounter;
-	for (; i > 0; --i)
+	uint32_t i = 0;
+	for (; i < UartCounter; ++i)
 	{
-		if (UartDriverList[i] != 0 && UartDriverList[i]->handle == huart)
+		if (uartDriverList[i] != 0 && uartDriverList[i]->handle == huart)
 		{
 #ifdef USE_RTOS
-			if (xEventGroupSetBitsFromISR(UartDriverList[i]->eventGroup, TransmitCompleted, &temp) != pdPASS)
+			if (xEventGroupSetBitsFromISR(uartDriverList[i]->eventGroup, TransmitCompleted, &temp) != pdPASS)
 			{
 				__breakpoint(0);
 			}
 #endif
-			UartCounter[i]->transmitStatus |= TransmitCompleted;
+			uartDriverList[i]->transmitStatus |= TransmitCompleted;
 			break;
 		}
 	}
@@ -204,23 +212,23 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	{
+
 #ifdef USE_RTOS
 		BaseType_t temp = pdFALSE;
 #endif
 
-		uint32_t i = UartCounter;
-		for (; i > 0; --i)
+		uint32_t i = 0;
+		for (; i < UartCounter; ++i)
 		{
-			if (UartDriverList[i] != 0 && UartDriverList[i]->handle == huart)
+			if (uartDriverList[i] != 0 && uartDriverList[i]->handle == huart)
 			{
 #ifdef USE_RTOS
-				if (xEventGroupSetBitsFromISR(UartDriverList[i]->eventGroup, ReceiveCompleted, &temp) != pdPASS)
+				if (xEventGroupSetBitsFromISR(uartDriverList[i]->eventGroup, ReceiveCompleted, &temp) != pdPASS)
 				{
 					__breakpoint(0);
 				}
 #endif
-				UartCounter[i]->transmitStatus |= ReceiveCompleted;
+				uartDriverList[i]->transmitStatus |= ReceiveCompleted;
 				break;
 			}
 		}
@@ -228,4 +236,4 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 #ifdef USE_RTOS
 		portYIELD_FROM_ISR(temp);
 #endif
-	}
+}

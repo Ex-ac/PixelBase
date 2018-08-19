@@ -6,6 +6,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <FreeRTOS.h>
+#include <task.h>
+#include <event_groups.h>
+
 #define PixelBaseCounter 14
 #define SpiCounter 3
 #define UartCounter 2
