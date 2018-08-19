@@ -17,8 +17,6 @@ extern "C"
 #define ShortCommandBuffSize 7
 #define MaxSizeOfBuffByte 1024
 
-
-
 #ifndef HAL_TimeoutMs
 
 #define HAL_TimeoutMs 1UL
@@ -50,7 +48,7 @@ typedef SpiSlaver TransmitHandle;
 	
 #define TransmitHandle_EndTransmit(handle, direction) (SpiSlaver_EndTransmit((handle), (direction)))
 
-#define TransmitHandle_WaitForTransmit(handle, direction, timeoutMs) (SpiSlaver_WaitForTransmit((handle), (direction), (timeoutMs)))
+#define TransmitHandle_WaitForTransmit(handle, direction, ms) (SpiSlaver_WaitForTransmit((handle), (direction), (ms)))
 
 
 #endif
@@ -64,10 +62,25 @@ void PixelBase_SetSaveDirPath(char *dirPath);
 #ifdef SendToPCByUartDriver
 #include "../UartDriver/UartDriver.h"
 typedef  UartDriver SendToPCHandle;
+
+#define SendToPCHandle_PrepareForTransmit(handle, direction, ms) (UartDriver_PrepareForTransmit((handle), (direction), (ms)))
+
+#define SendToPCHandle_EndTransmit(handle, direction) (UartDriver_EndTransmit((handle), (direction)))
+
+#define SendToPCHandle_WaitForTransmit(handle, direction, ms) (UartDriver_WaitForTransmit((handle), (direction), (ms)))
+
+
+#define SendToPCHandle_ReceiveByDMA(handle, data, size) (UartDriver_ReceiveByDMA(handle, (data), (size)))
+
+#define SendToPCHandle_Receive(handle, data, size, timeout) (UartDriver_Receive((handle), (data), (size), (timeout)))
+	
+#define SendToPCHandle_TransmitByDMA(handle, data, size) (UartDriver_TransmitByDMA((handle), (data), (size)))
+	
+#define SendToPCHandle_Transmit(handle, data, size, timeout) (UartDriver_Transmit((handle), (data), (size), (timeout)))
+
 #endif
 
 
-#include <stdint.h>
 
 #ifndef TimeoutMs 
 #define TimeoutMs 1
@@ -267,7 +280,7 @@ typedef struct TagPixelBase
 
 	uint32_t tickUse;
 
-	SendToPCHandle *sendToPcHandle;
+	SendToPCHandle *sendToPCHandle;
 
 }PixelBase;
 

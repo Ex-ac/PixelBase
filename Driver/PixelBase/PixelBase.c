@@ -274,38 +274,66 @@ void PixelBase_DealAnswer(PixelBase *pixelBase)
 
 bool PixelBase_SendPackData(PixelBase *pixelBase)
 {
-//	uint8_t *tData = pixelBase.receiveDataBuff;
-//	
-//	*(tData+0)= 0x7e;
-//	*(tData+1)= 0;
-//	*(tData+2)= LongCommandBuffSize;
-//	*(tData+3)= id;
-//	*(tData+11) = checksum(tData + 1, LongCommandBuffSize - 3);
+	uint8_t *tData = pixelBase.receiveDataBuff;
+	
+	*(tData+0)= 0x7e;
+	*(tData+1)= 0;
+	*(tData+2)= LongCommandBuffSize;
+	*(tData+3)= id;
+	*(tData+11) = checksum(tData + 1, LongCommandBuffSize - 3);
 
-//	if (PixelBase_PackDataAnswerCommand(pixelBase) != uint8_t(AnswerCommand_GetPicturePack) || !(pixelBase->saveWay & uint8_t(SendDataPackToPC)))
-//	{
-//		if (mWifiHandle->sendDataPrepare(LongCommandBuffSize))
-//		{
-//			mWifiHandle->sendData(receive, LongCommandBuffSize);
-//			sendDataEnd();
-//		}
-//	}
-//	else
-//	{
-//		*(tData+1)= uint16_t(pixelBase->packData.sizeOfByte + LongCommandBuffSize) >> 8;
-//		*(tData+2)= uint16_t(pixelBase->packData.sizeOfByte + LongCommandBuffSize) & 0xff;
-//		*(tData+11) += checksum(pixelBase->packData.data, pixelBase->packData.sizeOfByte);
+	if (PixelBase_PackDataAnswerCommand(pixelBase) != uint8_t(AnswerCommand_GetPicturePack) || !(pixelBase->saveWay & uint8_t(SendDataPackToPC)))
+	{
+		if (!SendToPCHandle_PrepareForTransmit(pixleBase->sendToPCHandle, Transmit, 100))
+		{
+			return false;
+		}
+		SendToPCHandle_TransmitByDMA(pixelBase->sendToPCHandle, tData, LongCommandBuffSize);
 
-//		if (sendToPcHandle->sendDataPrepare(pixelBase->packData.sizeOfByte + LongCommandBuffSize))
-//		{
-//			sendToPcHandle->sendData(*(tData+ L)ngCommandBuffSize - 2);
-//			sendToPcHandle->sendData(pixelBase->packData.data, pixelBase->packData.sizeOfByte);
+		if (!SendToPCHandle_WaitForTransmit(pixelBase->sendToPCHandle, Transmit, 100))
+		{
+			SendToPCHandle_EndTransmit(pixelBase->sendToPCHandle, Transmit);
+			return false;
+		}
+		SendToPCHandle_EndTransmit(pixelBase->sendToPCHandle, Transmit);
+	}
+	else
+	{
+		*(tData+1)= uint16_t(pixelBase->packData.sizeOfByte + LongCommandBuffSize) >> 8;
+		*(tData+2)= uint16_t(pixelBase->packData.sizeOfByte + LongCommandBuffSize) & 0xff;
+		*(tData+11) += checksum(pixelBase->packData.data, pixelBase->packData.sizeOfByte);
 
-//			sendToPcHandle->sendData(*(tData++ )ongCommandBuffSize - 2, 2)
-//			sendDataEnd();
-//		}
+		if (!SendToPCHandle_PrepareForTransmit(pixleBase->sendToPCHandle, Transmit, 100))
+		{
+			return false;
+		}
+		SendToPCHandle_TransmitByDMA(pixelBase->sendToPCHandle, tData, LongCommandBuffSize - 2);
 
-//	}
+		if (!SendToPCHandle_WaitForTransmit(pixelBase->sendToPCHandle, Transmit, 100))
+		{
+			SendToPCHandle_EndTransmit(pixelBase->sendToPCHandle, Transmit);
+			return false;
+		}
+
+		SendToPCHandle_TransmitByDMA(pixelBase->sendToPCHandle, pixelBase->packData.data, pixelBase->packData.sizeOfByte);
+
+
+		if (!SendToPCHandle_WaitForTransmit(pixelBase->sendToPCHandle, Transmit, 100))
+		{
+			SendToPCHandle_EndTransmit(pixelBase->sendToPCHandle, Transmit);
+			return false;
+		}
+
+		SendToPCHandle_TransmitByDMA(pixelBase->sendToPCHandle, tData + LongCommandBuffSize - 2,  2);
+
+		if (!SendToPCHandle_WaitForTransmit(pixelBase->sendToPCHandle, Transmit, 100))
+		{
+			SendToPCHandle_EndTransmit(pixelBase->sendToPCHandle, Transmit);
+			return false;
+		}
+
+		SendToPCHandle_EndTransmit(pixelBase->sendToPCHandle, Transmit);
+	}
 	return true;
 }
 //save data pack to sd
