@@ -93,7 +93,7 @@ bool SpiMaster_WaitForTransmit(SpiMaster *driver, uint8_t direction, uint32_t ms
 
 
 
-void SpiSlaver_Init(SpiSlaver *slaver, SpiMaster *master, GPIO_TypeDef *port, uint16_t pin);
+void SpiSlaver_Init(SpiSlaver *slaver, SpiMaster *master, GPIO_TypeDef *port, uint32_t pin);
 
 bool SpiSlaver_PrepareForTransmit(SpiSlaver *slaver, uint8_t direction, uint32_t ms);
 

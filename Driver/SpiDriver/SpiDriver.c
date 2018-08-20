@@ -200,7 +200,7 @@ inline bool SpiMaster_WaitForTransmit(SpiMaster *driver, uint8_t direction, uint
 
 
 
-void SpiSlaver_Init(SpiSlaver *slaver, SpiMaster *master, GPIO_TypeDef *port, uint16_t pin)
+void SpiSlaver_Init(SpiSlaver *slaver, SpiMaster *master, GPIO_TypeDef *port, uint32_t pin)
 {
 	GPIO_InitTypeDef csnPinInitData;
 

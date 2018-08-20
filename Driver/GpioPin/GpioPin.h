@@ -13,7 +13,7 @@ extern "C"
 typedef struct TagGpioPin
 {
 	GPIO_TypeDef *port;
-	uint16_t pin;
+	uint32_t pin;
 }GpioPin;
 
 void GpioPin_Init(GpioPin *gpinPin, GPIO_InitTypeDef *gpioInitData);
