@@ -219,16 +219,16 @@ void createPixelBase()
 #elif PixelBaseCounter == 3
 void createPixelBase()
 {
-	PixelBase *pixleBase = (PixelBase *)(pvPortMalloc(sizeof(PixelBase)));
+	PixelBase *pixelBase = (PixelBase *)(pvPortMalloc(sizeof(PixelBase)));
 	PixelBase_Init(pixelBase, 0, spiMasterList[0], GPIOA, GPIO_PIN_4, GPIOC, GPIO_PIN_4, uartDriverList[0]);
 }
 #endif
 
 
 #if UartCounter == 2
-void createUart()
+void createUartDriver()
 {
 	UartDriver *uartDriver = (UartDriver *)(pvPortMalloc(sizeof(UartDriver)));
-	UartDriver_Init(uartDriver, husart0, 0);
+	UartDriver_Init(uartDriver, &huart1, 0);
 }
 #endif

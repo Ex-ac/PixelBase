@@ -7,11 +7,11 @@
 #include "../Driver/PixelBase/PixelBase.h"
 
 #include "spi.h"
-
+#include "usart.h"
 
 void createPixelBase(void);
 void createSpiMaster(void);
-
+void createUartDriver(void);
 
 #endif
 

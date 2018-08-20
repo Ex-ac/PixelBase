@@ -115,6 +115,9 @@ inline HAL_StatusTypeDef UartDriver_Transmit(UartDriver *driver, const uint8_t *
 inline HAL_StatusTypeDef UartDriver_TransmitByDMA(UartDriver *driver, const uint8_t *pData, uint16_t size)
 {
 	driver->transmitStatus &= (~TransmitCompleted);
+#ifdef USE_RTOS
+	xEventGroupClearBits(driver->eventGroup, TransmitCompleted);
+#endif
 	return HAL_UART_Transmit_DMA(driver->handle, (uint8_t *)(pData), size);
 }
 
@@ -130,6 +133,9 @@ inline HAL_StatusTypeDef UartDriver_Receive(UartDriver *driver, uint8_t *pData, 
 inline HAL_StatusTypeDef UartDriver_ReceiveByDMA(UartDriver *driver, uint8_t *pData, uint16_t size)
 {
 	driver->transmitStatus &= (~ReceiveCompleted);
+#ifdef USE_RTOS
+	xEventGroupClearBits(driver->eventGroup, ReceiveCompleted);
+#endif
 	return HAL_UART_Transmit_DMA(driver->handle, pData, size);
 }
 

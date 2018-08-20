@@ -55,8 +55,8 @@ typedef UartDriver SendToPCHandle;
 
 	typedef enum TagFlag
 	{
-		StartFlag = 0x8e,
-		EndFlag = 0xe8
+		StartFlag = 0x7e,
+		EndFlag = 0xe7
 	} Flag;
 
 	typedef enum TagRequestCommand

@@ -1,17 +1,16 @@
 #ifndef TASKPOOL_H_
 #define TASKPOOL_H_
 
-#include <FreeRTOS.h>
-#include <task.h>
-#include <queue.h>
+
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "spi.h"
 
 
-#include "../Driver/PixelBase/PixelBase.h"
+
 #include "../PortingLayer/GlobalDefine.h"
+#include "../PortingLayer/PortingLayer.h"
+#include "../FatFs/FatFsApi.h"
 
 #ifndef TaskPoolCounter
 #define TaskPoolCounter 3
@@ -25,9 +24,6 @@
 #define TaskPoolPriority 2
 #endif
 
-#ifndef MainTaskPriority
-#define MainTaskPriority 3
-#endif
 
 #ifndef MainTaskStackDepth
 #define MainTaskStackDepth (1024 / 4)
@@ -54,15 +50,16 @@ typedef struct TagQueueTaskItem
 } TaskQueueItem;
 
 //extern QueueHandle_t queue;
-
-void createMainTask(void);
-
-void taskPoolCreate(void);
-void taskPoolFunction(void * arg);
-
+void taskInit(void);
 void mainTaskFunction(void *arg);
 
-#define  taskQueueGetItem(item, ms) (xQueueReceive(taskQueueHandle, (void *)(item), pdMS_TO_TICKS(ms)) == pdPASS)
+
+void createTaskPool(void);
+void taskPoolFunction(void * arg);
+
+
+
+bool taskQueueGetItem(TaskQueueItem *item, uint32_t ms);
 
 
 bool taskQueueAddTrigger(const TaskItemPoint itemPoint, uint32_t ms);

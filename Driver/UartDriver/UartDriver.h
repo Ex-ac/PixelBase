@@ -3,7 +3,13 @@
 
 #include "../../PortingLayer/GlobalDefine.h"
 
+#ifdef USE_RTOS
 
+#include <FreeRTOS.h>
+#include <task.h>
+#include <event_groups.h>
+
+#endif
 
 typedef struct TagUartDriver
 {

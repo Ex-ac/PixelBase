@@ -129,6 +129,9 @@ inline HAL_StatusTypeDef SpiMaster_Transmit(SpiMaster *driver, const uint8_t *pD
 inline HAL_StatusTypeDef SpiMaster_TransmitByDMA(SpiMaster *driver, const uint8_t *pData, uint16_t size)
 {
 	driver->transmitStatus &= (~TransmitCompleted);
+#ifdef USE_RTOS
+	xEventGroupClearBits(driver->eventGroup, TransmitCompleted);
+#endif
 	return HAL_SPI_Transmit_DMA(driver->handle, (uint8_t *)(pData), size);
 }
 
@@ -143,7 +146,10 @@ inline HAL_StatusTypeDef SpiMaster_Receive(SpiMaster *driver, uint8_t *pData, ui
 inline HAL_StatusTypeDef SpiMaster_ReceiveByDMA(SpiMaster *driver, uint8_t *pData, uint16_t size)
 {
 	driver->transmitStatus &= (~ReceiveCompleted);
-	return HAL_SPI_Transmit_DMA(driver->handle, pData, size);
+#ifdef USE_RTOS
+	xEventGroupClearBits(driver->eventGroup, ReceiveCompleted);
+#endif
+	return HAL_SPI_Receive_DMA(driver->handle, pData, size);
 }
 
 inline bool SpiMaster_PrepareForTransmit(SpiMaster *driver, uint8_t direction, uint32_t ms)

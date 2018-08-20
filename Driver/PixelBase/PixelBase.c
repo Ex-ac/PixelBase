@@ -2,13 +2,19 @@
 
 PixelBase *pixelBaseList[PixelBaseCounter];
 
-static char saveDirPath[11];
+static char saveDirPath[15] = "18082021553078";
 inline void PixelBase_SetSaveDirPath(char *dirPath)
 {
 	int32_t i = 0;
-	for (; i < 11; ++i)
+	
+	for (; i < 14; ++i)
 	{
 		saveDirPath[i] = *(dirPath + i);
+	}
+	saveDirPath[14] = '\0';
+	if (f_mkdir(saveDirPath) != FR_OK)
+	{
+		__breakpoint(0);
 	}
 }
 
@@ -97,9 +103,7 @@ inline static bool SendToPCHandle_WaitForTransmit(SendToPCHandle *handle, uint8_
 
 /*
 
-inline static PixelBase_GetFirst11Byte(pixelBase) (TransmitHandle_Receive((pixelBase)->transmitHandle, (pixelBase)->receiveDataBuff, 11, HAL_TimeoutMs))
-inline static PixelBase_GetLast2Byte(pixelBase) (TransmitHandle_Receive((pixelBase)->transmitHandle, (pixelBase)->receiveDataBuff + 11, 2, HAL_TimeoutMs))
-inline static PixelBase_GetLongByte(pixelBase, data, size) (TransmitHandle_ReceiveByDMA((pixelBase)->transmitHandle, (data), (size)))
+
 
 
 
@@ -121,6 +125,7 @@ inline static HAL_StatusTypeDef PixelBase_GetLongByte(PixelBase *pixelBase, uint
 bool PixelBase_SendRequestCommand(PixelBase *pixelBase, const uint8_t *data)
 {
 	uint8_t *tData = pixelBase->sendDataBuff;
+	uint32_t i = 0;
 	bool y = false;
 
 	*(tData + 0) = StartFlag;
@@ -129,18 +134,18 @@ bool PixelBase_SendRequestCommand(PixelBase *pixelBase, const uint8_t *data)
 	*(tData + 3) = pixelBase->id;
 	*(tData + LongCommandBuffSize - 1) = EndFlag;
 
-	for (uint8_t i = 0; i < ShortCommandBuffSize; ++i)
+	for (; i < ShortCommandBuffSize; ++i)
 	{
 		*(tData + i + 4) = *(data + i);
 	}
-	*(tData + LongCommandBuffSize - 2) = PixelBase_CheckSum((tData + 1), LongCommandBuffSize - 2);
+	*(tData + LongCommandBuffSize - 2) = PixelBase_CheckSum((tData + 1), LongCommandBuffSize - 3);
 
 	if (!TransmitHandle_PrepareForTransmit(pixelBase->transmitHandle, Transmit, TimeoutMs))
 	{
 		__breakpoint(0);
 	}
 
-	if (TransmitHandle_Transmit(pixelBase->transmitHandle, tData, LongCommandBuffSize, HAL_TimeoutMs) == HAL_OK)
+	if (TransmitHandle_Transmit(pixelBase->transmitHandle, pixelBase->sendDataBuff, LongCommandBuffSize, HAL_TimeoutMs) == HAL_OK)
 	{
 		if (!TransmitHandle_WaitForTransmit(pixelBase->transmitHandle, Transmit, TimeoutMs))
 		{
@@ -191,6 +196,7 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 
 	if (temp != HAL_OK)
 	{
+		__breakpoint(0);
 		TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 		return pixelBase->lastErrorCode = ErrorCode_DriverFaliureError;
 	}
@@ -199,16 +205,23 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 	{
 		if (data == 0)
 		{
+			__breakpoint(0);
 			TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 			return pixelBase->lastErrorCode = ErrorCode_NeedDataBuff;
 		}
 		else
 		{
-			temp = TransmitHandle_ReceiveByDMA(pixelBase->transmitHandle, data, PixelBase_PackSize(pixelBase) - 8);
+			temp = PixelBase_GetLongByte(pixelBase, data, PixelBase_PackSize(pixelBase) - 8);
 			if (temp != HAL_OK)
 			{
+				__breakpoint(0);
 				TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 				return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_DriverFaliureError);
+			}
+			if (!TransmitHandle_WaitForTransmit(pixelBase->transmitHandle, Receive, 10 * TimeoutMs))
+			{
+				__breakpoint(0);
+
 			}
 			sum += PixelBase_CheckSum(data, PixelBase_PackSize(pixelBase) - 8);
 		}
@@ -217,14 +230,16 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 	temp = PixelBase_GetLast2Byte(pixelBase);
 	if (temp != HAL_OK)
 	{
+		__breakpoint(0);
 		TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 		return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_DriverFaliureError);
 	}
-
-	sum += PixelBase_CheckSum(pixelBase->receiveDataBuff, LongCommandBuffSize - 3);
+	TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
+	sum += PixelBase_CheckSum(pixelBase->receiveDataBuff + 1, LongCommandBuffSize - 3);
 
 	if (sum != *(pixelBase->receiveDataBuff + LongCommandBuffSize - 2))
 	{
+		__breakpoint(0);
 		return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_CheckError);
 	}
 	PixelBase_SetNeedGetAnswer(pixelBase, false);
@@ -290,8 +305,8 @@ inline uint8_t PixelBase_TakePictureAnswer(PixelBase *pixelBase)
 	uint8_t *tData = pixelBase->receiveDataBuff;
 	if (*(tData + 5) == 0x00)
 	{
-		pixelBase->picturePackInfo.sizeOfByte = ((uint32_t)(*(tData + 6) << 16)) + ((uint32_t)(*(tData + 7)) << 8) + (uint32_t)(*(tData + 10));
-
+		pixelBase->picturePackInfo.sizeOfByte = ((uint32_t)(*(tData + 6) << 16)) + ((uint32_t)(*(tData + 7)) << 8) + (uint32_t)(*(tData + 8));
+		pixelBase->picturePackInfo.sizeOfPack = ((uint16_t)(*(tData + 9)) << 8) + (uint16_t)(*(tData + 10));
 		return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_NoneError);
 	}
 	else
@@ -319,10 +334,10 @@ inline uint8_t PixelBase_GetPicturePackAnswer(PixelBase *pixelBase, const uint8_
 {
 	pixelBase->packData.data = data;
 
-	if (*(data + 5) == 0x00)
+	if (*(pixelBase->receiveDataBuff + 5) == 0x01)
 	{
-		pixelBase->packData.numberOfPack = (uint16_t)(*(data + 6) << 8) + (*(data + 7));
-		pixelBase->packData.sizeOfByte = (uint16_t)(*(data + 1) << 8) + *(data + 2);
+		pixelBase->packData.numberOfPack = (uint16_t)(*(pixelBase->receiveDataBuff + 6) << 8) + (*(pixelBase->receiveDataBuff + 7));
+		pixelBase->packData.sizeOfByte = PixelBase_PackSize(pixelBase) - 8;
 		pixelBase->packData.sizeOfPack = pixelBase->picturePackInfo.sizeOfPack;
 
 		return pixelBase->lastErrorCode = ErrorCode_NoneError;
@@ -336,8 +351,8 @@ inline uint8_t PixelBase_GetPicturePackAnswer(PixelBase *pixelBase, const uint8_
 inline uint8_t PixelBase_CheckSum(const uint8_t *data, const uint16_t count)
 {
 	uint8_t sum = 0;
-
-	for (uint16_t i = 0; i < count; ++i)
+	uint16_t i = 0;
+	for (; i < count; ++i)
 	{
 		sum += *(data + i);
 	}
@@ -346,7 +361,7 @@ inline uint8_t PixelBase_CheckSum(const uint8_t *data, const uint16_t count)
 
 inline void PixelBase_InquiryRequest(uint8_t *data)
 {
-	*data = RequestCommand_Inquiry;
+	*(data + 0) = (uint8_t)(RequestCommand_Inquiry);
 }
 
 inline void PixelBase_FocusRequest(uint8_t *data, uint8_t focus, const Zoom zoom)
@@ -381,6 +396,7 @@ inline void PixelBase_GetPicturePackRequest(uint8_t *data, uint16_t numberOfPack
 	*(data + 3) = numberOfPack % 256;
 	*(data + 4) = totalSizeOfPack / 256;
 	*(data + 5) = totalSizeOfPack % 256;
+	*(data + 6) = 0;
 }
 
 //Pixlebase
@@ -390,9 +406,9 @@ void PixelBase_Init(PixelBase *pixelBase, uint8_t id, SpiMaster *master, GPIO_Ty
 	GPIO_InitTypeDef irqInitData;
 
 	pixelBase->sendToPCHandle = pcHnadle;
-
+	pixelBase->saveWay = (uint8_t)(SendToPC) | (uint8_t)(SaveToSD);
 	pixelBase->id = id;
-
+	pixelBase->status |= PixelBaseStatus_AutoGetNextDataPack;
 #ifdef USE_RTOS
 	pixelBase->transmitHandle = (TransmitHandle *)(pvPortMalloc(sizeof(TransmitHandle)));
 #else
@@ -518,9 +534,9 @@ inline void PixelBase_SetSavePackDataFinished(PixelBase *pixelBase)
 
 bool PixelBase_SavePackData(PixelBase *pixelBase)
 {
-	uint8_t fileName[17] = {0x00};
+	uint8_t fileName[22] = {0x00};
 	uint32_t count;
-	sprintf((char *)(fileName), "%s/%2d.jpg", saveDirPath, pixelBase->id);
+	sprintf((char *)(fileName), "%s\\%2d.jpg", saveDirPath, pixelBase->id);
 
 	while (!FatFsApi_Prepare(1))
 	{
@@ -538,10 +554,15 @@ bool PixelBase_SavePackData(PixelBase *pixelBase)
 		f_lseek(&SDFile, pixelBase->picturePackInfo.sizeOfByte);
 	}
 
-	f_lseek(&SDFile, (pixelBase->packData.numberOfPack - 1) * MaxSizeOfBuffByte);
+	if (f_lseek(&SDFile, (pixelBase->packData.numberOfPack - 1) * MaxSizeOfBuffByte) != FR_OK)
+	{
+		__breakpoint(0);
+	}
 
-	f_write(&SDFile, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count);
-
+	if (f_write(&SDFile, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count) != FR_OK)
+	{
+		__breakpoint(0);
+	}
 	f_close(&SDFile);
 
 	FatFsApi_End();
@@ -672,7 +693,7 @@ inline void PixelBase_SetStatusFree(PixelBase *pixelBase, bool y)
 bool PixelBase_Timeout(PixelBase *pixelBase)
 {
 #ifdef USE_RTOS
-	return pixelBase->tickUse > 3;
+	return pixelBase->tickUse > TicksTimeout;
 #else
 	return false;
 #endif

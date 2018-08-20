@@ -20,15 +20,16 @@
 
 #define HAL_TimeoutMs 1
 
-#define TaskPoolCounter 3
+#define TaskPoolCounter 1
 #define TaskPoolStackDepth (2 * 1024 / 4)
-#define TaskPoolPriority 2
+#define TaskPoolPriority 1
 
-#define MainTaskPriority 3
+#define MainTaskPriority 2
 #define MainTaskStackDepth (1024 / 4)
 
 #define TaskQueueLength (PixelBaseCounter * 2)
 
+#define TicksTimeout 10
 
 typedef enum TagTransmitDirection
 {
