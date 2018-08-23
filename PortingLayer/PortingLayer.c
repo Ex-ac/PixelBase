@@ -158,53 +158,60 @@ void createPixelBase()
 
 void createPixelBase()
 {
-	SendToPCHandle sendToPCHandle = NULL;
+	SendToPCHandle *sendToPCHandle = uartDriverList[0];
 	PixelBase *pixelBase;
 
 	//spi1
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 0, spiMasterList[0], GPIOC, GPIO_PIN_1, GPIOC, GPIO_PIN_0, sendToPCHandle);
+	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(PixelBase)));
+	PixelBase_Init(pixelBase, 0, spiMasterList[0], GPIOC, GPIO_PIN_1, GPIOC, GPIO_PIN_0, uartDriverList[0]);
+	
+	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(PixelBase)));
+	PixelBase_Init(pixelBase, 1, spiMasterList[0], GPIOA, GPIO_PIN_0, GPIOA, GPIO_PIN_1, uartDriverList[0]);
+	
+	
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 0, spiMasterList[0], GPIOC, GPIO_PIN_1, GPIOC, GPIO_PIN_0, sendToPCHandle);
 
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 1, spiMasterList[0], GPIOA, GPIO_PIN_0, GPIOA, GPIO_PIN_1, sendToPCHandle);
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 1, spiMasterList[0], GPIOA, GPIO_PIN_0, GPIOA, GPIO_PIN_1, sendToPCHandle);
 
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 2, spiMasterList[0], GPIOE, GPIO_PIN_4, GPIOE, GPIO_PIN_2, sendToPCHandle);
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 2, spiMasterList[0], GPIOE, GPIO_PIN_4, GPIOE, GPIO_PIN_2, sendToPCHandle);
 
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 4, spiMasterList[0], GPIOC, GPIO_PIN_5, GPIOC, GPIO_PIN_4, sendToPCHandle);
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 4, spiMasterList[0], GPIOC, GPIO_PIN_5, GPIOC, GPIO_PIN_4, sendToPCHandle);
 
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 7, spiMasterList[0], GPIOB, GPIO_PIN_1, GPIOE, GPIO_PIN_7, sendToPCHandle);
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 7, spiMasterList[0], GPIOB, GPIO_PIN_1, GPIOE, GPIO_PIN_7, sendToPCHandle);
 
-	//spi2
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 10, spiMasterList[1], GPIOE, GPIO_PIN_9, GPIOE, GPIO_PIN_10, sendToPCHandle);
+//	//spi2
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 10, spiMasterList[1], GPIOE, GPIO_PIN_9, GPIOE, GPIO_PIN_10, sendToPCHandle);
 
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 11, spiMasterList[1], GPIOE, GPIO_PIN_12, GPIOE, GPIO_PIN_11, sendToPCHandle);
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 11, spiMasterList[1], GPIOE, GPIO_PIN_12, GPIOE, GPIO_PIN_11, sendToPCHandle);
 
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 12, spiMasterList[1], GPIOD, GPIO_PIN_11, GPIOD, GPIO_PIN_12, sendToPCHandle);
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 12, spiMasterList[1], GPIOD, GPIO_PIN_11, GPIOD, GPIO_PIN_12, sendToPCHandle);
 
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 13, spiMasterList[1], GPIOD, GPIO_PIN_14, GPIOD, GPIO_PIN_13, sendToPCHandle);
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 13, spiMasterList[1], GPIOD, GPIO_PIN_14, GPIOD, GPIO_PIN_13, sendToPCHandle);
 
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 6, spiMasterList[1], GPIOC, GPIO_PIN_7, GPIOC, GPIO_PIN_6, sendToPCHandle);
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 6, spiMasterList[1], GPIOC, GPIO_PIN_7, GPIOC, GPIO_PIN_6, sendToPCHandle);
 
-	//spi3
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 3, spiMasterList[2], GPIOD, GPIO_PIN_1, GPIOD, GPIO_PIN_3, sendToPCHandle);
+//	//spi3
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 3, spiMasterList[2], GPIOD, GPIO_PIN_1, GPIOD, GPIO_PIN_3, sendToPCHandle);
 
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 5, spiMasterList[2], GPIOD, GPIO_PIN_6, GPIOD, GPIO_PIN_5, sendToPCHandle);
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 5, spiMasterList[2], GPIOD, GPIO_PIN_6, GPIOD, GPIO_PIN_5, sendToPCHandle);
 
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 8, spiMasterList[2], GPIOB, GPIO_PIN_7, GPIOB, GPIO_PIN_8, sendToPCHandle);
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 8, spiMasterList[2], GPIOB, GPIO_PIN_7, GPIOB, GPIO_PIN_8, sendToPCHandle);
 
-	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
-	PixelBase_Init(pixelBase, 9, spiMasterList[2], GPIOE, GPIO_PIN_0, GPIOE, GPIO_PIN_9, sendToPCHandle);
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+//	PixelBase_Init(pixelBase, 9, spiMasterList[2], GPIOE, GPIO_PIN_0, GPIOE, GPIO_PIN_9, sendToPCHandle);
 }
 
 #elif PixelBaseCounter == 10
@@ -221,6 +228,15 @@ void createPixelBase()
 {
 	PixelBase *pixelBase = (PixelBase *)(pvPortMalloc(sizeof(PixelBase)));
 	PixelBase_Init(pixelBase, 0, spiMasterList[0], GPIOA, GPIO_PIN_4, GPIOC, GPIO_PIN_4, uartDriverList[0]);
+
+
+	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(PixelBase)));
+	PixelBase_Init(pixelBase, 1, spiMasterList[1], GPIOG, GPIO_PIN_1, GPIOB, GPIO_PIN_12, uartDriverList[0]);
+
+	
+//	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(PixelBase)));
+//	PixelBase_Init(pixelBase, 2, spiMasterList[2], GPIOG, GPIO_PIN_15, GPIOB, GPIO_PIN_7, uartDriverList[0]);
+
 }
 #endif
 

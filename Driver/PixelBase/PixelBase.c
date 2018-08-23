@@ -1,12 +1,12 @@
 #include "PixelBase.h"
 
-PixelBase *pixelBaseList[PixelBaseCounter];
+PixelBase *pixelBaseList[PixelBaseCounter] = {0x00};
 
-static char saveDirPath[15] = "18082021553078";
+static char saveDirPath[15] = "";
 inline void PixelBase_SetSaveDirPath(char *dirPath)
 {
 	int32_t i = 0;
-	
+
 	for (; i < 14; ++i)
 	{
 		saveDirPath[i] = *(dirPath + i);
@@ -14,7 +14,7 @@ inline void PixelBase_SetSaveDirPath(char *dirPath)
 	saveDirPath[14] = '\0';
 	if (f_mkdir(saveDirPath) != FR_OK)
 	{
-		__breakpoint(0);
+		DebugBreak();
 	}
 }
 
@@ -142,14 +142,14 @@ bool PixelBase_SendRequestCommand(PixelBase *pixelBase, const uint8_t *data)
 
 	if (!TransmitHandle_PrepareForTransmit(pixelBase->transmitHandle, Transmit, TimeoutMs))
 	{
-		__breakpoint(0);
+		DebugBreak();
 	}
 
 	if (TransmitHandle_Transmit(pixelBase->transmitHandle, pixelBase->sendDataBuff, LongCommandBuffSize, HAL_TimeoutMs) == HAL_OK)
 	{
 		if (!TransmitHandle_WaitForTransmit(pixelBase->transmitHandle, Transmit, TimeoutMs))
 		{
-			__breakpoint(0);
+			DebugBreak();
 		}
 		y = true;
 		PixelBase_SetNeedAnswer(pixelBase, true);
@@ -166,14 +166,14 @@ bool PixelBase_ReSendRequestCommand(PixelBase *pixelBase)
 
 	if (!TransmitHandle_PrepareForTransmit(pixelBase->transmitHandle, Transmit, TimeoutMs))
 	{
-		__breakpoint(0);
+		DebugBreak();
 	}
 
 	if (TransmitHandle_Transmit(pixelBase->transmitHandle, pixelBase->sendDataBuff, LongCommandBuffSize, HAL_TimeoutMs) == HAL_OK)
 	{
 		if (!TransmitHandle_WaitForTransmit(pixelBase->transmitHandle, Transmit, TimeoutMs))
 		{
-			__breakpoint(0);
+			DebugBreak();
 		}
 		y = true;
 		PixelBase_SetNeedAnswer(pixelBase, true);
@@ -188,15 +188,16 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 {
 	uint8_t sum = 0;
 	HAL_StatusTypeDef temp;
+
 	if (!TransmitHandle_PrepareForTransmit(pixelBase->transmitHandle, Receive, TimeoutMs))
 	{
-		__breakpoint(0);
+		DebugBreak();
 	}
 	temp = PixelBase_GetFirst11Byte(pixelBase);
 
 	if (temp != HAL_OK)
 	{
-		__breakpoint(0);
+		DebugBreak();
 		TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 		return pixelBase->lastErrorCode = ErrorCode_DriverFaliureError;
 	}
@@ -205,7 +206,7 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 	{
 		if (data == 0)
 		{
-			__breakpoint(0);
+			DebugBreak();
 			TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 			return pixelBase->lastErrorCode = ErrorCode_NeedDataBuff;
 		}
@@ -214,14 +215,13 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 			temp = PixelBase_GetLongByte(pixelBase, data, PixelBase_PackSize(pixelBase) - 8);
 			if (temp != HAL_OK)
 			{
-				__breakpoint(0);
+				DebugBreak();
 				TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 				return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_DriverFaliureError);
 			}
 			if (!TransmitHandle_WaitForTransmit(pixelBase->transmitHandle, Receive, 10 * TimeoutMs))
 			{
-				__breakpoint(0);
-
+				DebugBreak();
 			}
 			sum += PixelBase_CheckSum(data, PixelBase_PackSize(pixelBase) - 8);
 		}
@@ -230,7 +230,7 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 	temp = PixelBase_GetLast2Byte(pixelBase);
 	if (temp != HAL_OK)
 	{
-		__breakpoint(0);
+		DebugBreak();
 		TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 		return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_DriverFaliureError);
 	}
@@ -239,7 +239,7 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 
 	if (sum != *(pixelBase->receiveDataBuff + LongCommandBuffSize - 2))
 	{
-		__breakpoint(0);
+		DebugBreak();
 		return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_CheckError);
 	}
 	PixelBase_SetNeedGetAnswer(pixelBase, false);
@@ -406,7 +406,11 @@ void PixelBase_Init(PixelBase *pixelBase, uint8_t id, SpiMaster *master, GPIO_Ty
 	GPIO_InitTypeDef irqInitData;
 
 	pixelBase->sendToPCHandle = pcHnadle;
-	pixelBase->saveWay = (uint8_t)(SendToPC) | (uint8_t)(SaveToSD);
+	pixelBase->saveWay = 0x00;
+	pixelBase->saveWay |= (uint8_t)(SendToPC);
+#ifdef PixelBase_SaveToSD
+	pixelBase->saveWay |= (uint8_t)(SaveToSD);
+#endif
 	pixelBase->id = id;
 	pixelBase->status |= PixelBaseStatus_AutoGetNextDataPack;
 #ifdef USE_RTOS
@@ -479,8 +483,9 @@ bool PixelBase_SendPackData(PixelBase *pixelBase)
 		{
 			return false;
 		}
-		SendToPCHandle_TransmitByDMA(pixelBase->sendToPCHandle, tData, LongCommandBuffSize);
+		//		SendToPCHandle_TransmitByDMA(pixelBase->sendToPCHandle, tData, LongCommandBuffSize);
 
+		SendToPCHandle_Transmit(pixelBase->sendToPCHandle, tData, LongCommandBuffSize, 10 * HAL_TimeoutMs);
 		if (!SendToPCHandle_WaitForTransmit(pixelBase->sendToPCHandle, Transmit, 100))
 		{
 			SendToPCHandle_EndTransmit(pixelBase->sendToPCHandle, Transmit);
@@ -536,34 +541,47 @@ bool PixelBase_SavePackData(PixelBase *pixelBase)
 {
 	uint8_t fileName[22] = {0x00};
 	uint32_t count;
-	sprintf((char *)(fileName), "%s\\%2d.jpg", saveDirPath, pixelBase->id);
+	sprintf((char *)(fileName), "%2d.jpg", pixelBase->id);
+	uint8_t ret;
 
 	while (!FatFsApi_Prepare(1))
 	{
 	}
 
-	if (f_open(&SDFile, (const char *)(fileName), FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
+	ret = f_open(&SDFile, (const char *)(fileName), FA_CREATE_ALWAYS | FA_WRITE);
+
+	if (FatFsApi_Error(ret))
 	{
-		__breakpoint(0);
-		FatFsApi_End();
 		return false;
 	}
 
 	if (pixelBase->packData.numberOfPack == 1)
 	{
-		f_lseek(&SDFile, pixelBase->picturePackInfo.sizeOfByte);
+		ret = f_lseek(&SDFile, pixelBase->picturePackInfo.sizeOfByte);
+
+		if (FatFsApi_Error(ret))
+		{
+			return false;
+		}
 	}
 
-	if (f_lseek(&SDFile, (pixelBase->packData.numberOfPack - 1) * MaxSizeOfBuffByte) != FR_OK)
+	ret = f_lseek(&SDFile, (pixelBase->packData.numberOfPack - 1) * MaxSizeOfBuffByte);
+	if (FatFsApi_Error(ret))
 	{
-		__breakpoint(0);
+		return false;
 	}
 
-	if (f_write(&SDFile, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count) != FR_OK)
+	ret = f_write(&SDFile, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count);
+	if (FatFsApi_Error(ret))
 	{
-		__breakpoint(0);
+		return false;
 	}
-	f_close(&SDFile);
+
+	ret = f_close(&SDFile);
+	if (FatFsApi_Error(ret))
+	{
+		return false;
+	}
 
 	FatFsApi_End();
 

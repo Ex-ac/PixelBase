@@ -203,7 +203,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 #ifdef USE_RTOS
 			if (xEventGroupSetBitsFromISR(uartDriverList[i]->eventGroup, TransmitCompleted, &temp) != pdPASS)
 			{
-				__breakpoint(0);
+				DebugBreak();
 			}
 #endif
 			uartDriverList[i]->transmitStatus |= TransmitCompleted;
@@ -231,7 +231,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 #ifdef USE_RTOS
 				if (xEventGroupSetBitsFromISR(uartDriverList[i]->eventGroup, ReceiveCompleted, &temp) != pdPASS)
 				{
-					__breakpoint(0);
+					DebugBreak();
 				}
 #endif
 				uartDriverList[i]->transmitStatus |= ReceiveCompleted;

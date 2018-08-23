@@ -47,7 +47,7 @@ struct TagSpiMaster
 {
 	uint8_t transmitStatus;
 	uint8_t status;
-	
+	uint8_t index;
     SpiSlaver *currentSlaver;
     SPI_HandleTypeDef *handle;
 	
@@ -73,6 +73,8 @@ HAL_StatusTypeDef SpiMaster_ReInit(SpiMaster *driver, SPI_HandleTypeDef *handle,
 HAL_StatusTypeDef SpiMaster_DeInit(SpiMaster *driver, uint32_t forceTimeout);
 
 SpiSlaver *SpiMaster_CurrentSlaver(SpiMaster *driver);
+
+uint8_t SpiMaster_Index(SpiMaster *driver);
 
 HAL_StatusTypeDef SpiMaster_Transmit(SpiMaster *driver, const uint8_t *pData, uint16_t size, uint32_t ms);
 

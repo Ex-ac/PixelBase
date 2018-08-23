@@ -8,12 +8,12 @@ extern "C"
 
 #include <fatfs.h>
 #include <stdbool.h>
-#include <stm32f4xx_hal.h>
+
+#include "../PortingLayer/GlobalDefine.h"
 
 #ifdef USE_RTOS
 #include <FreeRTOS.h>
 #include <semphr.h>
-
 #endif
 
 
@@ -22,6 +22,7 @@ void FatFsApi_Init(void);
 bool FatFsApi_Prepare(uint32_t ms);
 void FatFsApi_End(void);
 
+bool FatFsApi_Error(uint8_t ret);
 
 #ifdef __cplusplus
 }

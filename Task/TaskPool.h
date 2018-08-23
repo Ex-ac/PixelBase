@@ -41,7 +41,7 @@ typedef PixelBase* TaskItemPoint;
 
 
 
-extern QueueHandle_t taskQueueHandle;
+extern QueueHandle_t taskQueueHandle[TaskPoolCounter];
 
 typedef struct TagQueueTaskItem
 {
@@ -59,7 +59,7 @@ void taskPoolFunction(void * arg);
 
 
 
-bool taskQueueGetItem(TaskQueueItem *item, uint32_t ms);
+bool taskQueueGetItem(uint8_t index, TaskQueueItem *item, uint32_t ms);
 
 
 bool taskQueueAddTrigger(const TaskItemPoint itemPoint, uint32_t ms);
@@ -71,7 +71,10 @@ bool taskQueueAddCommandResendFromISR(const TaskItemPoint itemPoint, BaseType_t 
 
 bool taskQueueItemIsTrigger(const TaskQueueItem *queueItem);
 bool taskQueueItemIsResend(const TaskQueueItem *queueItem);
-	
+
+void testTask(void *arg);
+
 void vApplicationTickHook(void);
+
 
 #endif

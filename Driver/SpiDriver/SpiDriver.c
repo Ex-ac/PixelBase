@@ -21,7 +21,10 @@ HAL_StatusTypeDef SpiMaster_Init(SpiMaster *driver, SPI_HandleTypeDef *handle, u
 	HAL_StatusTypeDef temp;
 
 #ifdef USE_RTOS
-	driver->eventGroup = xEventGroupCreate();
+	if ((driver->eventGroup = xEventGroupCreate()) ==NULL)
+	{
+		DebugBreak();
+	}
 #endif
 
 	SpiMaster_EndTransmit(driver, Transmit | Receive);
@@ -43,6 +46,7 @@ HAL_StatusTypeDef SpiMaster_Init(SpiMaster *driver, SPI_HandleTypeDef *handle, u
 	driver->status = DriverStatus_Run;
 	driver->transmitStatus = TransmitFree | ReceiveFree | TransmitCompleted | ReceiveCompleted;
 
+	driver->index = index;
 	spiMasterList[index] = driver;
 
 	SpiMaster_EndTransmit(driver, Transmit | Receive);
@@ -74,14 +78,8 @@ HAL_StatusTypeDef SpiMaster_ReInit(SpiMaster *driver, SPI_HandleTypeDef *handle,
 		driver->handle->Init.CRCCalculation = handle->Init.CRCCalculation;
 		driver->handle->Init.CRCPolynomial = handle->Init.CRCPolynomial;
 	}
-	for (i = 0; i < SpiCounter; ++i)
-	{
-		if (spiMasterList[i] == driver)
-		{
-			break;
-		}
-	}
-	return SpiMaster_Init(driver, driver->handle, i);
+	
+	return SpiMaster_Init(driver, driver->handle, driver->index);
 }
 
 HAL_StatusTypeDef SpiMaster_DeInit(SpiMaster *driver, uint32_t forceTimeout)
@@ -118,6 +116,10 @@ inline SpiSlaver *SpiMaster_CurrentSlaver(SpiMaster *driver)
 	return driver->currentSlaver;
 }
 
+inline uint8_t SpiMaster_Index(SpiMaster *driver)
+{
+	return driver->index;
+}
 inline HAL_StatusTypeDef SpiMaster_Transmit(SpiMaster *driver, const uint8_t *pData, uint16_t size, uint32_t ms)
 {
 	driver->transmitStatus |= TransmitCompleted;
@@ -217,7 +219,14 @@ void SpiSlaver_Init(SpiSlaver *slaver, SpiMaster *master, GPIO_TypeDef *port, ui
 	csnPinInitData.Pin = pin;
 	csnPinInitData.Mode = GPIO_MODE_OUTPUT_PP;
 	csnPinInitData.Pull = GPIO_PULLUP;
+
+#ifdef GPIO_SPEED_FREQ_VERY_HIGH
 	csnPinInitData.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+#else
+#ifdef GPIO_SPEED_FREQ_MEDIUM
+	csnPinInitData.Speed = GPIO_SPEED_FREQ_HIGH;
+#endif
+#endif
 	GpioPin_Init(&(slaver->csnPin), &csnPinInitData);
 
 	GpioPin_OutputHight(&(slaver->csnPin), true);
@@ -281,12 +290,12 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 	uint32_t i = 0;
 	for (; i < SpiCounter; ++i)
 	{
-		if (spiMasterList[i] != 0 && spiMasterList[i]->handle == hspi)
+		if (spiMasterList[i] != 0x00 && spiMasterList[i]->handle == hspi)
 		{
 #ifdef USE_RTOS
 			if (xEventGroupSetBitsFromISR(spiMasterList[i]->eventGroup, TransmitCompleted, &temp) != pdPASS)
 			{
-				__breakpoint(0);
+				DebugBreak();
 			}
 #endif
 			spiMasterList[i]->transmitStatus |= TransmitCompleted;
@@ -308,12 +317,12 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 	uint32_t i = 0;
 	for (; i < SpiCounter; ++i)
 	{
-		if (spiMasterList[i] != 0 && spiMasterList[i]->handle == hspi)
+		if (spiMasterList[i] != 0x00 && spiMasterList[i]->handle == hspi)
 		{
 #ifdef USE_RTOS
 			if (xEventGroupSetBitsFromISR(spiMasterList[i]->eventGroup, ReceiveCompleted, &temp) != pdPASS)
 			{
-				__breakpoint(0);
+				DebugBreak();
 			}
 #endif
 			spiMasterList[i]->transmitStatus |= ReceiveCompleted;
