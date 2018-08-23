@@ -288,6 +288,7 @@ void testTask(void *arg)
 		UartDriver_Transmit(uartDriverList[0], (const uint8_t *)(txt), 24, 10);
 		UartDriver_EndTransmit(uartDriverList[0], Transmit);
 		i++;
+		vTaskDelay(pdMS_TO_TICKS(1));
 	}
 }
 
