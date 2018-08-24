@@ -52,8 +52,9 @@ void taskInit(void)
 	createSpiMaster();
 	createUartDriver();
 	createPixelBase();
+	
 	FatFsApi_Init();
-
+	
 //	createTaskPool();
 
 	xTaskCreate(testTask, NULL, MainTaskStackDepth, NULL, MainTaskPriority, NULL);
@@ -64,16 +65,16 @@ void taskInit(void)
 void mainTaskFunction(void *arg)
 {
 	//	init hardwave
-	uint8_t data[ShortCommandBuffSize] = {0x05, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00};
+	uint8_t data[ShortCommandBuffSize] = {0x05, 0x03, 0x01, 0x01, 0x00, 0x00, 0x00};
 	TaskQueueItem item;
 
 	MX_FATFS_Init();
 
 	FatFsApi_Error(f_mount(&SDFatFS, SDPath, 1));
 
-	taskQueueAddCommand(pixelBaseList[0], data, pdMS_TO_TICKS(1));
-	taskQueueAddCommand(pixelBaseList[1], data, pdMS_TO_TICKS(1));
-	taskQueueAddCommand(pixelBaseList[2], data, pdMS_TO_TICKS(1));
+//	taskQueueAddCommand(pixelBaseList[0], data, pdMS_TO_TICKS(1));
+//	taskQueueAddCommand(pixelBaseList[1], data, pdMS_TO_TICKS(1));
+	taskQueueAddCommand(pixelBaseList[3], data, pdMS_TO_TICKS(1));
 
 	while (true)
 	{
@@ -260,7 +261,7 @@ void testTask(void *arg)
 	uint32_t i;
 	uint8_t ret;
 	uint32_t count;
-	char txt[25];
+	char txt[128];
 
 	MX_FATFS_Init();
 
@@ -268,27 +269,21 @@ void testTask(void *arg)
 
 	while (true)
 	{
-		FatFsApi_Prepare(100);
-
-		sprintf(txt, "NO:%20d\n", i);
-		ret = f_open(&SDFile, "test.txt", FA_CREATE_ALWAYS | FA_WRITE);
-		FatFsApi_Error(ret);
-
-		ret = f_lseek(&SDFile, i * 24);
-		FatFsApi_Error(ret);
-
-		ret = f_write(&SDFile, txt, 24, &count);
-		FatFsApi_Error(ret);
-
-		ret = f_close(&SDFile);
-		FatFsApi_Error(ret);
-
-		FatFsApi_End();
-		UartDriver_PrepareForTransmit(uartDriverList[0], Transmit, 1);
-		UartDriver_Transmit(uartDriverList[0], (const uint8_t *)(txt), 24, 10);
-		UartDriver_EndTransmit(uartDriverList[0], Transmit);
-		i++;
-		vTaskDelay(pdMS_TO_TICKS(1));
+		sprintf(txt, "PixelBase size: %d\n", sizeof(PixelBase));
+		UartDriver_Transmit(uartDriverList[0], txt, 128, 20);
+		
+		sprintf(txt, "UartDriver size: %d\n", sizeof(UartDriver));
+		UartDriver_Transmit(uartDriverList[0], txt, 128, 20);
+		
+		
+		sprintf(txt, "SpiDriver size: %d\n", sizeof(SpiMaster));
+		UartDriver_Transmit(uartDriverList[0], txt, 128, 20);
+		
+		
+		sprintf(txt, "TaskQueueItem size: %d\n", sizeof(TaskQueueItem));
+		UartDriver_Transmit(uartDriverList[0], txt, 128, 20);
+		
+		vTaskDelay(pdMS_TO_TICKS(100));
 	}
 }
 

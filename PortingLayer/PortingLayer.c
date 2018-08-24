@@ -168,6 +168,12 @@ void createPixelBase()
 	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(PixelBase)));
 	PixelBase_Init(pixelBase, 1, spiMasterList[0], GPIOA, GPIO_PIN_0, GPIOA, GPIO_PIN_1, uartDriverList[0]);
 	
+	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(PixelBase)));
+	PixelBase_Init(pixelBase, 2, spiMasterList[0], GPIOE, GPIO_PIN_4, GPIOE, GPIO_PIN_2, uartDriverList[0]);
+	
+	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
+	PixelBase_Init(pixelBase, 3, spiMasterList[2], GPIOD, GPIO_PIN_1, GPIOD, GPIO_PIN_3, uartDriverList[0]);
+	
 	
 //	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(pixelBase)));
 //	PixelBase_Init(pixelBase, 0, spiMasterList[0], GPIOC, GPIO_PIN_1, GPIOC, GPIO_PIN_0, sendToPCHandle);

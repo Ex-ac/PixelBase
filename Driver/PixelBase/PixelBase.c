@@ -541,14 +541,23 @@ bool PixelBase_SavePackData(PixelBase *pixelBase)
 {
 	uint8_t fileName[22] = {0x00};
 	uint32_t count;
-	sprintf((char *)(fileName), "%2d.jpg", pixelBase->id);
+	
 	uint8_t ret;
-
+	
+	sprintf((char *)(fileName), "%2d.jpg", pixelBase->id);
+	
+	for (uint32_t i = 0; i < 22; ++ i)
+	{
+		if (fileName[i] == ' ')
+		{
+			fileName[i] = '0';
+		}
+	}
 	while (!FatFsApi_Prepare(1))
 	{
 	}
 
-	ret = f_open(&SDFile, (const char *)(fileName), FA_CREATE_ALWAYS | FA_WRITE);
+	ret = f_open(&SDFile, (const TCHAR *)(fileName), FA_CREATE_ALWAYS | FA_WRITE);
 
 	if (FatFsApi_Error(ret))
 	{
