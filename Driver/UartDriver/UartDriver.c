@@ -18,10 +18,9 @@ inline static void UartDriver_Unlock(UartDriver *driver, uint8_t direction)
 HAL_StatusTypeDef UartDriver_Init(UartDriver *driver, UART_HandleTypeDef *handle, uint32_t index)
 {
 	HAL_StatusTypeDef temp;
-	
 
 #ifdef USE_RTOS
-		driver->eventGroup = xEventGroupCreate();
+	driver->eventGroup = xEventGroupCreate();
 #endif
 
 	UartDriver_EndTransmit(driver, Transmit | Receive);
@@ -88,7 +87,7 @@ HAL_StatusTypeDef UartDriver_DeInit(UartDriver *driver, uint32_t forceTimeout)
 	if (!UartDriver_PrepareForTransmit(driver, Transmit | Receive, forceTimeout)) //等待释放
 	{
 		//可以添加一个较高的优先级，会添加必要的事务线程，使用线程任务是十分的低效，要频发的切换任务
-		UartDriver_EndTransmit(driver, Transmit | Receive);				  //强制释放
+		UartDriver_EndTransmit(driver, Transmit | Receive);						 //强制释放
 		UartDriver_PrepareForTransmit(driver, Transmit | Receive, forceTimeout); //强占，避免在此时去被使用。
 	}
 
@@ -186,7 +185,6 @@ inline bool UartDriver_WaitForTransmit(UartDriver *driver, uint8_t direction, ui
 	}
 	return false;
 #endif
-	
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
@@ -220,26 +218,26 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 
 #ifdef USE_RTOS
-		BaseType_t temp = pdFALSE;
+	BaseType_t temp = pdFALSE;
 #endif
 
-		uint32_t i = 0;
-		for (; i < UartCounter; ++i)
+	uint32_t i = 0;
+	for (; i < UartCounter; ++i)
+	{
+		if (uartDriverList[i] != 0 && uartDriverList[i]->handle == huart)
 		{
-			if (uartDriverList[i] != 0 && uartDriverList[i]->handle == huart)
-			{
 #ifdef USE_RTOS
-				if (xEventGroupSetBitsFromISR(uartDriverList[i]->eventGroup, ReceiveCompleted, &temp) != pdPASS)
-				{
-					DebugBreak();
-				}
-#endif
-				uartDriverList[i]->transmitStatus |= ReceiveCompleted;
-				break;
+			if (xEventGroupSetBitsFromISR(uartDriverList[i]->eventGroup, ReceiveCompleted, &temp) != pdPASS)
+			{
+				DebugBreak();
 			}
+#endif
+			uartDriverList[i]->transmitStatus |= ReceiveCompleted;
+			break;
 		}
+	}
 
 #ifdef USE_RTOS
-		portYIELD_FROM_ISR(temp);
+	portYIELD_FROM_ISR(temp);
 #endif
 }

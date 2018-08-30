@@ -16,12 +16,12 @@ inline static void SpiMaster_Unlock(SpiMaster *driver, uint8_t direction)
 
 #endif
 
-HAL_StatusTypeDef SpiMaster_Init(SpiMaster *driver, SPI_HandleTypeDef *handle, uint32_t index)
+HAL_StatusTypeDef SpiMaster_Init(SpiMaster *driver, SPI_HandleTypeDef *handle, uint8_t index)
 {
 	HAL_StatusTypeDef temp;
 
 #ifdef USE_RTOS
-	if ((driver->eventGroup = xEventGroupCreate()) ==NULL)
+	if ((driver->eventGroup = xEventGroupCreate()) == NULL)
 	{
 		DebugBreak();
 	}
@@ -78,7 +78,7 @@ HAL_StatusTypeDef SpiMaster_ReInit(SpiMaster *driver, SPI_HandleTypeDef *handle,
 		driver->handle->Init.CRCCalculation = handle->Init.CRCCalculation;
 		driver->handle->Init.CRCPolynomial = handle->Init.CRCPolynomial;
 	}
-	
+
 	return SpiMaster_Init(driver, driver->handle, driver->index);
 }
 
@@ -205,9 +205,6 @@ inline bool SpiMaster_WaitForTransmit(SpiMaster *driver, uint8_t direction, uint
 #endif
 }
 
-
-
-
 void SpiSlaver_Init(SpiSlaver *slaver, SpiMaster *master, GPIO_TypeDef *port, uint32_t pin)
 {
 	GPIO_InitTypeDef csnPinInitData;
@@ -275,11 +272,6 @@ inline HAL_StatusTypeDef SpiSlaver_ReceiveByDMA(SpiSlaver *slaver, uint8_t *pDat
 {
 	return SpiMaster_ReceiveByDMA(slaver->master, pData, size);
 }
-
-
-
-
-
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {

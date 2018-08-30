@@ -25,15 +25,15 @@ extern "C"
 #ifdef TransmitBySpi
 
 #include "../SpiDriver/SpiDriver.h"
-typedef SpiSlaver TransmitHandle;
+	typedef SpiSlaver TransmitHandle;
 
 #endif
 
-void PixelBase_SetSaveDirPath(char *dirPath);
+	void PixelBase_SetSaveDirPath(char *dirPath);
 
 #ifdef SendToPCByUartDriver
 #include "../UartDriver/UartDriver.h"
-typedef UartDriver SendToPCHandle;
+	typedef UartDriver SendToPCHandle;
 
 #endif
 
@@ -41,15 +41,6 @@ typedef UartDriver SendToPCHandle;
 #define TimeoutMs 1
 #endif
 
-#ifdef USE_RTOS
-
-#define delayMs(ms) (vTaskDelay(pdMS_TO_TICKS(ms)))
-
-#else
-
-#define delayMs(ms) (HAL_Delay((ms)))
-
-#endif
 
 	typedef uint16_t Zoom;
 
@@ -273,9 +264,8 @@ typedef UartDriver SendToPCHandle;
 	void PixelBase_TakePictureRequest(uint8_t *data, TakePictureInfo *p_info);
 	void PixelBase_GetPicturePackRequest(uint8_t *data, uint16_t numberOfPack, uint16_t totalSizeOfPack);
 
-
 #ifdef TransmitBySpi
-void PixelBase_Init(PixelBase *pixelBase, uint8_t id, SpiMaster *master, GPIO_TypeDef *csnPort, uint16_t csnPin, GPIO_TypeDef *irqPort, uint16_t irqPin, SendToPCHandle *pcHnadle);
+	void PixelBase_Init(PixelBase *pixelBase, uint8_t id, SpiMaster *master, GPIO_TypeDef *csnPort, uint32_t csnPin, GPIO_TypeDef *irqPort, uint32_t irqPin, SendToPCHandle *pcHnadle);
 #endif
 
 	void PixeBase_SetSaveWay(PixelBase *pixelBase, uint8_t saveWay);
@@ -298,8 +288,6 @@ void PixelBase_Init(PixelBase *pixelBase, uint8_t id, SpiMaster *master, GPIO_Ty
 	void PixelBase_SetAutoGetDataPack(PixelBase *pixelBase, bool y);
 
 	bool PixelBase_NextRequestCommand(PixelBase *pixelBase, uint8_t *data);
-
-
 
 	uint16_t PixeBase_CurrentDataPackNumber(PixelBase *pixelBase);
 

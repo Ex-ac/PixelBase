@@ -19,7 +19,6 @@ typedef struct TagUartDriver
 
 	UART_HandleTypeDef *handle;
 
-
 #ifdef USE_RTOS
 	EventGroupHandle_t eventGroup;
 #endif
@@ -38,13 +37,9 @@ HAL_StatusTypeDef UartDriver_TransmitByDMA(UartDriver *driver, const uint8_t *pD
 HAL_StatusTypeDef UartDriver_Receive(UartDriver *driver, uint8_t *pData, uint16_t size, uint32_t ms);
 HAL_StatusTypeDef UartDriver_ReceiveByDMA(UartDriver *driver, uint8_t *pData, uint16_t size);
 
-
 bool UartDriver_PrepareForTransmit(UartDriver *driver, uint8_t direction, uint32_t ms);
 bool UartDriver_EndTransmit(UartDriver *driver, uint8_t direction);
 
 bool UartDriver_WaitForTransmit(UartDriver *driver, uint8_t direction, uint32_t ms);
-
-
-
 
 #endif

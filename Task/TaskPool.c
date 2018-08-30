@@ -1,7 +1,19 @@
 #include "TaskPool.h"
 
+#include <string.h>
+
+#include "spi.h"
+
 QueueHandle_t taskQueueHandle[TaskPoolCounter];
 
+
+//memary use
+/*
+PixelBase size: 88
+UartDriver size: 12
+SpiDriver size: 16
+TaskQueueItem size: 12
+*/
 static uint8_t taskIsTriggerDeal(TaskItemPoint pixelBase, uint8_t *data)
 {
 	uint8_t errorCode;
@@ -55,9 +67,9 @@ void taskInit(void)
 	
 	FatFsApi_Init();
 	
-//	createTaskPool();
+	createTaskPool();
 
-	xTaskCreate(testTask, NULL, MainTaskStackDepth, NULL, MainTaskPriority, NULL);
+	xTaskCreate(mainTaskFunction, NULL, MainTaskStackDepth, NULL, MainTaskPriority, NULL);
 
 	vTaskStartScheduler();
 }
@@ -65,31 +77,53 @@ void taskInit(void)
 void mainTaskFunction(void *arg)
 {
 	//	init hardwave
-	uint8_t data[ShortCommandBuffSize] = {0x05, 0x03, 0x01, 0x01, 0x00, 0x00, 0x00};
+	
+	uint8_t data[ShortCommandBuffSize] = {0x05, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00};
+	uint8_t data2[ShortCommandBuffSize] = {0x09, 0x03, 0x00, 0x00, 0x00, 0x00};
+	
+	
 	TaskQueueItem item;
 
 	MX_FATFS_Init();
 
 	FatFsApi_Error(f_mount(&SDFatFS, SDPath, 1));
+	
 
-//	taskQueueAddCommand(pixelBaseList[0], data, pdMS_TO_TICKS(1));
-//	taskQueueAddCommand(pixelBaseList[1], data, pdMS_TO_TICKS(1));
-	taskQueueAddCommand(pixelBaseList[3], data, pdMS_TO_TICKS(1));
 
+	for (uint8_t i = 0; i < PixelBaseCounter; ++i)
+	{
+		taskQueueAddCommand(pixelBaseList[i], data2, pdMS_TO_TICKS(1));
+	}
+	delayMs(1000);
+	
+
+	for (uint8_t i = 0; i < PixelBaseCounter; ++i)
+	{
+		taskQueueAddCommand(pixelBaseList[i], data, pdMS_TO_TICKS(1));
+	}
+	
+	
 	while (true)
 	{
-		vTaskDelay(1000);
+		
+//		HAL_SPI_Transmit(&hspi5, "hello\n", 6, 10);
+		delayMs(1000);
 	}
 }
 
 void createTaskPool(void)
 {
 	uint32_t i = 0;
-
-	for (; i < TaskPoolCounter; ++i)
+	for (i = 0; i < TaskPoolCounter; ++i)
 	{
-		taskQueueHandle[i] = xQueueCreate(TaskQueueLength, sizeof(TaskQueueItem));
-		xTaskCreate(taskPoolFunction, NULL, TaskPoolStackDepth, (void *)(i), TaskPoolPriority, NULL);
+		if ((taskQueueHandle[i] = xQueueCreate(TaskQueueLength, sizeof(TaskQueueItem))) == NULL)
+		{
+			DebugBreak();
+		}
+		if (xTaskCreate(taskPoolFunction, NULL, TaskPoolStackDepth, (void *)(i), TaskPoolPriority, NULL) != pdPASS)
+		{
+			DebugBreak();
+		}
 	}
 }
 
@@ -134,7 +168,7 @@ void taskPoolFunction(void *arg)
 					{
 						if (PixelBase_NextRequestCommand(queueItem.itemPoint, queueItem.command))
 						{
-							if (!taskQueueAddCommand(queueItem.itemPoint, queueItem.command, pdMS_TO_TICKS(TimeoutMs)))
+							if (!taskQueueAddCommand(queueItem.itemPoint, queueItem.command, TimeoutMs))
 							{
 								DebugBreak();
 							}
@@ -155,7 +189,7 @@ void taskPoolFunction(void *arg)
 				PixelBase_SendRequestCommand(queueItem.itemPoint, queueItem.command);
 			}
 		}
-		vTaskDelay(TimeoutMs);
+//		delayMs(1);
 	}
 }
 
@@ -175,7 +209,7 @@ inline bool taskQueueAddTrigger(const TaskItemPoint itemPoint, uint32_t ms)
 		item.command[i] = 0xff;
 	}
 
-	return xQueueSend(taskQueueHandle[itemPoint->transmitHandle->master->index], &item, ms) == pdPASS;
+	return xQueueSend(taskQueueHandle[itemPoint->transmitHandle->master->index], &item, pdMS_TO_TICKS(ms)) == pdPASS;
 }
 
 inline bool taskQueueAddCommand(const TaskItemPoint itemPoint, const uint8_t *data, uint32_t ms)
@@ -183,11 +217,11 @@ inline bool taskQueueAddCommand(const TaskItemPoint itemPoint, const uint8_t *da
 	uint32_t i = 0;
 	TaskQueueItem item;
 	item.itemPoint = itemPoint;
-
 	for (; i < TaskQueueItemCommandLength; ++i)
 	{
 		item.command[i] = *(data + i);
 	}
+
 	return xQueueSend(taskQueueHandle[itemPoint->transmitHandle->master->index], &item, pdMS_TO_TICKS(ms)) == pdPASS;
 }
 
@@ -227,7 +261,7 @@ bool taskQueueAddTriggerFromISR(const TaskItemPoint itemPoint, BaseType_t *y)
 	{
 		item.command[i] = 0xff;
 	}
-	return xQueueSendFromISR(taskQueueHandle[itemPoint->transmitHandle->master->index], &item, y);
+	return xQueueSendFromISR(taskQueueHandle[itemPoint->transmitHandle->master->index], &item, y) == pdTRUE;
 }
 
 bool taskQueueAddCommandResendFromISR(const TaskItemPoint itemPoint, BaseType_t *y)
@@ -240,7 +274,7 @@ bool taskQueueAddCommandResendFromISR(const TaskItemPoint itemPoint, BaseType_t 
 	{
 		item.command[i] = 0x00;
 	}
-	return xQueueSendFromISR(taskQueueHandle[itemPoint->transmitHandle->master->index], &item, y);
+	return xQueueSendFromISR(taskQueueHandle[itemPoint->transmitHandle->master->index], &item, y) == pdTRUE;
 }
 
 bool taskQueueItemIsResend(const TaskQueueItem *queueItem)
@@ -248,7 +282,7 @@ bool taskQueueItemIsResend(const TaskQueueItem *queueItem)
 	uint32_t i = 0;
 	for (; i < TaskQueueItemCommandLength; ++i)
 	{
-		if (queueItem->command[i - 1] != 0x00)
+		if (queueItem->command[i] != 0x00)
 		{
 			return false;
 		}
@@ -270,20 +304,20 @@ void testTask(void *arg)
 	while (true)
 	{
 		sprintf(txt, "PixelBase size: %d\n", sizeof(PixelBase));
-		UartDriver_Transmit(uartDriverList[0], txt, 128, 20);
+		UartDriver_Transmit(uartDriverList[0], txt, strlen(txt), 20);
 		
 		sprintf(txt, "UartDriver size: %d\n", sizeof(UartDriver));
-		UartDriver_Transmit(uartDriverList[0], txt, 128, 20);
+		UartDriver_Transmit(uartDriverList[0], txt, strlen(txt), 20);
 		
 		
 		sprintf(txt, "SpiDriver size: %d\n", sizeof(SpiMaster));
-		UartDriver_Transmit(uartDriverList[0], txt, 128, 20);
+		UartDriver_Transmit(uartDriverList[0], txt, strlen(txt), 20);
 		
 		
 		sprintf(txt, "TaskQueueItem size: %d\n", sizeof(TaskQueueItem));
-		UartDriver_Transmit(uartDriverList[0], txt, 128, 20);
+		UartDriver_Transmit(uartDriverList[0], txt, strlen(txt), 20);
 		
-		vTaskDelay(pdMS_TO_TICKS(100));
+		vTaskDelay(pdMS_TO_TICKS(60 * 1000));
 	}
 }
 
@@ -294,7 +328,7 @@ void vApplicationTickHook(void)
 	BaseType_t yield = false;
 	for (; i < PixelBaseCounter; ++i)
 	{
-		if ((pixelBaseList[i] != 0x00) && PixelBase_NeedAnswer(*(pixelBaseList + i)))
+		if (((*(pixelBaseList + i)) != 0x00) && PixelBase_NeedAnswer(*(pixelBaseList + i)))
 		{
 			if (!PixleBase_HasAnswerIn(*(pixelBaseList + i)))
 			{
@@ -313,6 +347,8 @@ void vApplicationTickHook(void)
 			else
 			{
 				taskQueueAddTriggerFromISR(*(pixelBaseList + i), &y);
+				
+				PixelBase_SetNeedAnswer(*(pixelBaseList + i), false);
 				if (yield != pdTRUE && y == pdTRUE)
 				{
 					yield = pdTRUE;

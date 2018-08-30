@@ -14,4 +14,3 @@ void createSpiMaster(void);
 void createUartDriver(void);
 
 #endif
-
