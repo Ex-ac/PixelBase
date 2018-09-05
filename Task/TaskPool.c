@@ -68,9 +68,12 @@ void taskInit(void)
 	FatFsApi_Init();
 	
 	createTaskPool();
-
+	
+#ifdef TEST
+	xTaskCreate(testTask, NULL, MainTaskStackDepth, NULL, MainTaskPriority, NULL);
+#else
 	xTaskCreate(mainTaskFunction, NULL, MainTaskStackDepth, NULL, MainTaskPriority, NULL);
-
+#endif
 	vTaskStartScheduler();
 }
 
@@ -101,7 +104,8 @@ void mainTaskFunction(void *arg)
 	{
 		taskQueueAddCommand(pixelBaseList[i], data, pdMS_TO_TICKS(1));
 	}
-	
+//	taskQueueAddCommand(pixelBaseList[20], data, pdMS_TO_TICKS(1));
+//	taskQueueAddCommand(pixelBaseList[10], data, pdMS_TO_TICKS(1));
 	
 	while (true)
 	{
@@ -292,32 +296,44 @@ bool taskQueueItemIsResend(const TaskQueueItem *queueItem)
 
 void testTask(void *arg)
 {
+	uint8_t txt[64];
+	uint8_t data[ShortCommandBuffSize] = {0x05, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00};
 	uint32_t i;
-	uint8_t ret;
-	uint32_t count;
-	char txt[128];
+	
+	
+	TaskQueueItem item;
 
 	MX_FATFS_Init();
 
 	FatFsApi_Error(f_mount(&SDFatFS, SDPath, 1));
+	
+//	taskQueueAddCommand(pixelBaseList[0], data, pdMS_TO_TICKS(1));
 
+//	for (i = 0; i < 0xffff; ++i)
+//	{
+//		bool ok = true;
+//		
+//		do
+//		{
+//			if (FatFsApi_Prepare(1))
+//			{
+//			}
+//			
+//			
+//		} while (!ok);
+//	}
+	sprintf(txt, "%d\n", pdMS_TO_TICKS(1));
 	while (true)
 	{
-		sprintf(txt, "PixelBase size: %d\n", sizeof(PixelBase));
-		UartDriver_Transmit(uartDriverList[0], txt, strlen(txt), 20);
+		UartDriver_PrepareForTransmit(uartDriverList[0], Transmit, TimeoutMs);
 		
-		sprintf(txt, "UartDriver size: %d\n", sizeof(UartDriver));
-		UartDriver_Transmit(uartDriverList[0], txt, strlen(txt), 20);
+		UartDriver_Transmit(uartDriverList[0], txt, strlen(txt), HAL_TimeoutMs);
 		
+		UartDriver_EndTransmit(uartDriverList[0], Transmit);
 		
-		sprintf(txt, "SpiDriver size: %d\n", sizeof(SpiMaster));
-		UartDriver_Transmit(uartDriverList[0], txt, strlen(txt), 20);
-		
-		
-		sprintf(txt, "TaskQueueItem size: %d\n", sizeof(TaskQueueItem));
-		UartDriver_Transmit(uartDriverList[0], txt, strlen(txt), 20);
-		
-		vTaskDelay(pdMS_TO_TICKS(60 * 1000));
+//		HAL_SPI_Transmit(&hspi5, "hello\n", 6, 10);
+		delayMs(1000);
+	
 	}
 }
 

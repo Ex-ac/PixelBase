@@ -495,6 +495,7 @@ bool PixelBase_SendPackData(PixelBase *pixelBase)
 		else
 		{
 			ok = false;
+			sprintf(str, "%2d pack number: %8d, Total pack: %8d.\n", pixelBase->id, pixelBase->packData.numberOfPack, pixelBase->packData.sizeOfPack);
 		}
 	}
 	else if (PixelBase_PackDataAnswerCommand(pixelBase) == (uint8_t)(AnswerCommand_Focus))
@@ -623,37 +624,47 @@ bool PixelBase_SavePackData(PixelBase *pixelBase)
 	}
 	do
 	{
+		ok = true;
 		if (ok && FatFsApi_Prepare(TimeoutMs))
 		{
-			if (ok && FatFsApi_open(&SDFile, (const char *)(fileName), FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
+			if (ok && FatFsApi_Open(&SDFile, (const char *)(fileName), FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
 			{
 				ok = false;
 			}
 
 			if (ok && pixelBase->packData.numberOfPack == 1)
 			{
-				if (FatFsApi_lseek(&SDFile, pixelBase->picturePackInfo.sizeOfByte) != FR_OK)
+				if (FatFsApi_Lseek(&SDFile, pixelBase->picturePackInfo.sizeOfByte) != FR_OK)
 				{
 					ok = false;
 				}
 			}
-			if (ok && FatFsApi_lseek(&SDFile, (pixelBase->packData.numberOfPack - 1) * MaxSizeOfBuffByte) != FR_OK)
+			if (ok && FatFsApi_Lseek(&SDFile, (pixelBase->packData.numberOfPack - 1) * MaxSizeOfBuffByte) != FR_OK)
 			{
 				ok = false;
 			}
 
-			if (ok && FatFsApi_write(&SDFile, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count) != FR_OK)
+			if (ok && FatFsApi_Write(&SDFile, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count) != FR_OK)
 			{
 				ok = false;
 			}
-			if (ok && FatFsApi_close(&SDFile) != FR_OK)
+			
+			if (FatFsApi_Close(&SDFile) != FR_OK)
 			{
 				ok = false;
 			}
+
+			FatFsApi_End();
+
 		}
 		else
 		{
-			osDelay(TimeoutMs);
+			ok = false;
+		}
+		
+		if (!ok)
+		{
+			delayMs(1);
 		}
 	} while (!ok);
 

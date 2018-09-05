@@ -58,7 +58,7 @@ bool FatFsApi_Error(uint8_t ret)
 }
 
 
-inline FRESULT FatFsApi_open(FIL* fp, const TCHAR* path, BYTE mode)
+inline FRESULT FatFsApi_Open(FIL* fp, const TCHAR* path, BYTE mode)
 {	
 	uint8_t ret;
 	ret = f_open(fp, path, mode);
@@ -132,12 +132,11 @@ inline FRESULT FatFsApi_open(FIL* fp, const TCHAR* path, BYTE mode)
 		DebugBreak();
 		break;
 	}
-	FatFsApi_End();
 	return ret;
 	
 }
 
-FRESULT FatFsApi_lseek(FIL* fp, DWORD ofs)
+FRESULT FatFsApi_Lseek(FIL* fp, FSIZE_t ofs)
 {
 	uint8_t ret = f_lseek(fp, ofs);
 	switch (ret)
@@ -209,11 +208,10 @@ FRESULT FatFsApi_lseek(FIL* fp, DWORD ofs)
 		DebugBreak();
 		break;
 	}
-	FatFsApi_End();
 	return ret;
 }
 
-FRESULT FatFsApi_write(FIL* fp, const void *buff, UINT btw, UINT* bw)
+FRESULT FatFsApi_Write(FIL* fp, const void *buff, UINT btw, UINT* bw)
 {
 	uint8_t ret = f_write(fp, buff, btw, bw);
 
@@ -286,13 +284,10 @@ FRESULT FatFsApi_write(FIL* fp, const void *buff, UINT btw, UINT* bw)
 		DebugBreak();
 		break;
 	}
-	FatFsApi_End();
 	return ret;
-
-	
 }
 
-FRESULT FatFsApi_close(FIL* fp)
+FRESULT FatFsApi_Close(FIL* fp)
 {
 	uint8_t ret = f_close(fp);
 
@@ -365,7 +360,5 @@ FRESULT FatFsApi_close(FIL* fp)
 		DebugBreak();
 		break;
 	}
-	FatFsApi_End();
 	return ret;
-
 }

@@ -1,7 +1,11 @@
 #ifndef GLOBALDEFINE_H_
 #define GLOBALDEFINE_H_
 
-// stm32f407
+// stm32f427
+
+//#define TEST
+//#define USE_Debug
+
 #ifdef STM32F427xx
 #include <stm32f4xx_hal.h>
 
@@ -18,6 +22,8 @@
 #define UartCounter 2
 #endif
 
+
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -27,7 +33,7 @@
 
 //test
 
-//#define USE_Debug
+
 
 
 #define TimeoutMs 10
@@ -45,7 +51,7 @@
 
 #define TicksTimeout 10
 
-#define PixelBase_SaveToSD
+//#define PixelBase_SaveToSD
 
 
 

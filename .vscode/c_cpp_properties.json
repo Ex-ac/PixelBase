@@ -4,6 +4,7 @@
             "name": "STM32Fxx",
 			"browse": {
 				"path": [
+                    "E:/Documents/Library/FreeRTOS/include",
 					"${workspaceRoot}"
 				]
 			}
