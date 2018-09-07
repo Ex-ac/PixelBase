@@ -64,9 +64,12 @@ void taskInit(void)
 	createSpiMaster();
 	createUartDriver();
 	createPixelBase();
-	
-	FatFsApi_Init();
-	
+
+#ifdef USE_FatfsThread
+	FatfsThread_Init();
+#else
+	FatfsApi_Init();
+#endif
 	createTaskPool();
 	
 #ifdef TEST
@@ -80,16 +83,18 @@ void taskInit(void)
 void mainTaskFunction(void *arg)
 {
 	//	init hardwave
-	
+	RTC_TimeTypeDef time;
+	RTC_DateTypeDef date;
+
 	uint8_t data[ShortCommandBuffSize] = {0x05, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00};
 	uint8_t data2[ShortCommandBuffSize] = {0x09, 0x03, 0x00, 0x00, 0x00, 0x00};
 	
 	
 	TaskQueueItem item;
 
-	MX_FATFS_Init();
+//	MX_FATFS_Init();
 
-	FatFsApi_Error(f_mount(&SDFatFS, SDPath, 1));
+//	f_mount(&SDFatFS, SDPath, 1);
 	
 
 
@@ -99,7 +104,13 @@ void mainTaskFunction(void *arg)
 	}
 	delayMs(1000);
 	
+	HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
+	HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
 
+	while (!FatfsThread_AddCreateSaveDirCommand(&time, &date, 1))
+	{
+		delayMs(1);
+	}
 	for (uint8_t i = 0; i < PixelBaseCounter; ++i)
 	{
 		taskQueueAddCommand(pixelBaseList[i], data, pdMS_TO_TICKS(1));
@@ -305,7 +316,7 @@ void testTask(void *arg)
 
 	MX_FATFS_Init();
 
-	FatFsApi_Error(f_mount(&SDFatFS, SDPath, 1));
+	FatfsApi_Error(f_mount(&SDFatFS, SDPath, 1));
 	
 //	taskQueueAddCommand(pixelBaseList[0], data, pdMS_TO_TICKS(1));
 
@@ -315,7 +326,7 @@ void testTask(void *arg)
 //		
 //		do
 //		{
-//			if (FatFsApi_Prepare(1))
+//			if (FatfsApi_Prepare(1))
 //			{
 //			}
 //			

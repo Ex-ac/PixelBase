@@ -2,21 +2,7 @@
 
 PixelBase *pixelBaseList[PixelBaseCounter] = {0x00};
 
-static char saveDirPath[15] = "";
-inline void PixelBase_SetSaveDirPath(char *dirPath)
-{
-	int32_t i = 0;
 
-	for (; i < 14; ++i)
-	{
-		saveDirPath[i] = *(dirPath + i);
-	}
-	saveDirPath[14] = '\0';
-	if (f_mkdir(saveDirPath) != FR_OK)
-	{
-		DebugBreak();
-	}
-}
 
 #ifdef TransmitBySpi
 
@@ -308,6 +294,12 @@ inline uint8_t PixelBase_TakePictureAnswer(PixelBase *pixelBase)
 	{
 		pixelBase->picturePackInfo.sizeOfByte = ((uint32_t)(*(tData + 6) << 16)) + ((uint32_t)(*(tData + 7)) << 8) + (uint32_t)(*(tData + 8));
 		pixelBase->picturePackInfo.sizeOfPack = ((uint16_t)(*(tData + 9)) << 8) + (uint16_t)(*(tData + 10));
+#ifdef USE_FatfsThread
+		while (!FatfsThread_AddCreatePixelBaseDirCommand(pixelBase->id, 1))
+		{
+			delayMs(1);
+		}
+#endif
 		return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_NoneError);
 	}
 	else
@@ -609,64 +601,70 @@ inline void PixelBase_SetSavePackDataFinished(PixelBase *pixelBase)
 
 bool PixelBase_SavePackData(PixelBase *pixelBase)
 {
-	uint8_t fileName[22] = {0x00};
-	uint32_t count;
-	bool ok = true;
-
-	sprintf((char *)(fileName), "%2d.jpg", pixelBase->id);
-
-	for (uint32_t i = 0; i < 22; ++i)
+#ifdef USE_FatfsThread
+	while (!FatfsThread_AddCreatePixelBaseDirCommand(pixelBase->id, 1))
 	{
-		if (fileName[i] == ' ')
-		{
-			fileName[i] = '0';
-		}
+		delayMs(1);
 	}
-	do
-	{
-		ok = true;
-		if (ok && FatFsApi_Prepare(TimeoutMs))
-		{
-			if (ok && FatFsApi_Open(&SDFile, (const char *)(fileName), FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
-			{
-				ok = false;
-			}
+#endif
+	// uint8_t fileName[22] = {0x00};
+	// uint32_t count;
+	// bool ok = true;
 
-			if (ok && pixelBase->packData.numberOfPack == 1)
-			{
-				if (FatFsApi_Lseek(&SDFile, pixelBase->picturePackInfo.sizeOfByte) != FR_OK)
-				{
-					ok = false;
-				}
-			}
-			if (ok && FatFsApi_Lseek(&SDFile, (pixelBase->packData.numberOfPack - 1) * MaxSizeOfBuffByte) != FR_OK)
-			{
-				ok = false;
-			}
+	// sprintf((char *)(fileName), "%2d.jpg", pixelBase->id);
 
-			if (ok && FatFsApi_Write(&SDFile, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count) != FR_OK)
-			{
-				ok = false;
-			}
+	// for (uint32_t i = 0; i < 22; ++i)
+	// {
+	// 	if (fileName[i] == ' ')
+	// 	{
+	// 		fileName[i] = '0';
+	// 	}
+	// }
+	// do
+	// {
+	// 	ok = true;
+	// 	if (ok && FatfsApi_Prepare(TimeoutMs))
+	// 	{
+	// 		if (ok && FatfsApi_Open(&SDFile, (const char *)(fileName), FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
+	// 		{
+	// 			ok = false;
+	// 		}
+
+	// 		if (ok && pixelBase->packData.numberOfPack == 1)
+	// 		{
+	// 			if (FatfsApi_Lseek(&SDFile, pixelBase->picturePackInfo.sizeOfByte) != FR_OK)
+	// 			{
+	// 				ok = false;
+	// 			}
+	// 		}
+	// 		if (ok && FatfsApi_Lseek(&SDFile, (pixelBase->packData.numberOfPack - 1) * MaxSizeOfBuffByte) != FR_OK)
+	// 		{
+	// 			ok = false;
+	// 		}
+
+	// 		if (ok && FatfsApi_Write(&SDFile, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count) != FR_OK)
+	// 		{
+	// 			ok = false;
+	// 		}
 			
-			if (FatFsApi_Close(&SDFile) != FR_OK)
-			{
-				ok = false;
-			}
+	// 		if (FatfsApi_Close(&SDFile) != FR_OK)
+	// 		{
+	// 			ok = false;
+	// 		}
 
-			FatFsApi_End();
+	// 		FatfsApi_End();
 
-		}
-		else
-		{
-			ok = false;
-		}
+	// 	}
+	// 	else
+	// 	{
+	// 		ok = false;
+	// 	}
 		
-		if (!ok)
-		{
-			delayMs(1);
-		}
-	} while (!ok);
+	// 	if (!ok)
+	// 	{
+	// 		delayMs(1);
+	// 	}
+	// } while (!ok);
 
 	return true;
 }

@@ -10,7 +10,7 @@
 
 #include "../PortingLayer/GlobalDefine.h"
 #include "../PortingLayer/PortingLayer.h"
-#include "../FatFs/FatFsApi.h"
+#include "../Fatfs/FatfsApi.h"
 
 #ifndef TaskPoolCounter
 #define TaskPoolCounter 3

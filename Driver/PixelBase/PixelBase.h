@@ -6,7 +6,7 @@ extern "C"
 {
 #endif
 
-#include "../../Fatfs/FatFsApi.h"
+#include "../../Fatfs/FatfsApi.h"
 
 #include "../../PortingLayer/GlobalDefine.h"
 
@@ -29,7 +29,6 @@ extern "C"
 
 #endif
 
-	void PixelBase_SetSaveDirPath(char *dirPath);
 
 #ifdef SendToPCByUartDriver
 #include "../UartDriver/UartDriver.h"

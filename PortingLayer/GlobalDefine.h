@@ -12,7 +12,6 @@
 #define SpiCounter 4
 #define UartCounter 2
 #define PixelBaseCounter 34
-
 #endif
 
 #ifdef STM32F103xE
@@ -33,7 +32,7 @@
 
 //test
 
-
+#define USE_FatfsThread
 
 
 #define TimeoutMs 10
@@ -53,6 +52,7 @@
 
 //#define PixelBase_SaveToSD
 
+#define PixelBaseFileFragmentSize_KB 32
 
 
 #ifdef USE_RTOS
