@@ -6,7 +6,6 @@
 
 QueueHandle_t taskQueueHandle[TaskPoolCounter];
 
-
 //memary use
 /*
 PixelBase size: 88
@@ -39,14 +38,14 @@ static uint8_t taskIsTriggerDeal(TaskItemPoint pixelBase, uint8_t *data)
 			break;
 
 		default:
-			PixelBase_ReSendRequestCommand(pixelBase);
+			taskQueueAddCommandResend(pixelBase, TimeoutMs);
 			errorCode = ErrorCode_NoneError;
 			return errorCode;
 		}
 	}
 	else if (errorCode == ErrorCode_CheckError)
 	{
-		PixelBase_ReSendRequestCommand(pixelBase);
+		taskQueueAddCommandResend(pixelBase, TimeoutMs);
 		errorCode = ErrorCode_NoneError;
 		return errorCode;
 	}
@@ -65,13 +64,15 @@ void taskInit(void)
 	createUartDriver();
 	createPixelBase();
 
+#ifdef PixelBase_SaveToSD
 #ifdef USE_FatfsThread
 	FatfsThread_Init();
 #else
 	FatfsApi_Init();
 #endif
+#endif
 	createTaskPool();
-	
+
 #ifdef TEST
 	xTaskCreate(testTask, NULL, MainTaskStackDepth, NULL, MainTaskPriority, NULL);
 #else
@@ -88,40 +89,32 @@ void mainTaskFunction(void *arg)
 
 	uint8_t data[ShortCommandBuffSize] = {0x05, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00};
 	uint8_t data2[ShortCommandBuffSize] = {0x09, 0x03, 0x00, 0x00, 0x00, 0x00};
-	
-	
+
 	TaskQueueItem item;
-
-//	MX_FATFS_Init();
-
-//	f_mount(&SDFatFS, SDPath, 1);
-	
-
 
 	for (uint8_t i = 0; i < PixelBaseCounter; ++i)
 	{
 		taskQueueAddCommand(pixelBaseList[i], data2, pdMS_TO_TICKS(1));
 	}
 	delayMs(1000);
-	
+
 	HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
 	HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
 
-	while (!FatfsThread_AddCreateSaveDirCommand(&time, &date, 1))
-	{
-		delayMs(1);
-	}
+//	while (!FatfsThread_AddCreateSaveDirCommand(&time, &date, 1))
+//	{
+//		Debug_Msg("AddCreateSaveDirCommand Error\n");
+//		delayMs(1);
+//	}
 	for (uint8_t i = 0; i < PixelBaseCounter; ++i)
 	{
 		taskQueueAddCommand(pixelBaseList[i], data, pdMS_TO_TICKS(1));
 	}
-//	taskQueueAddCommand(pixelBaseList[20], data, pdMS_TO_TICKS(1));
-//	taskQueueAddCommand(pixelBaseList[10], data, pdMS_TO_TICKS(1));
-	
+
+//	taskQueueAddCommand(pixelBaseList[1], data, pdMS_TO_TICKS(1));
+//	taskQueueAddCommand(pixelBaseList[19], data, pdMS_TO_TICKS(1));
 	while (true)
 	{
-		
-//		HAL_SPI_Transmit(&hspi5, "hello\n", 6, 10);
 		delayMs(1000);
 	}
 }
@@ -133,7 +126,7 @@ void createTaskPool(void)
 	{
 		if ((taskQueueHandle[i] = xQueueCreate(TaskQueueLength, sizeof(TaskQueueItem))) == NULL)
 		{
-			DebugBreak();
+			Debug_Msg("AddCreateSaveDirCommand Error");
 		}
 		if (xTaskCreate(taskPoolFunction, NULL, TaskPoolStackDepth, (void *)(i), TaskPoolPriority, NULL) != pdPASS)
 		{
@@ -161,21 +154,22 @@ void taskPoolFunction(void *arg)
 				{
 				case ErrorCode_BusyError:
 					taskQueueAddCommandResend(queueItem.itemPoint, pdMS_TO_TICKS(TimeoutMs));
-					DebugBreak();
+
 					break;
 
 				case ErrorCode_CheckError:
-					DebugBreak();
 					taskQueueAddCommandResend(queueItem.itemPoint, pdMS_TO_TICKS(TimeoutMs));
-					DebugBreak();
+
 					break;
 
 				case ErrorCode_CommandError:
-					DebugBreak();
+					taskQueueAddCommandResend(queueItem.itemPoint, pdMS_TO_TICKS(TimeoutMs));
+
 					break;
 
 				case ErrorCode_DriverFaliureError:
-					DebugBreak();
+					taskQueueAddCommandResend(queueItem.itemPoint, pdMS_TO_TICKS(TimeoutMs));
+
 					break;
 
 				case ErrorCode_NoneError:
@@ -183,16 +177,16 @@ void taskPoolFunction(void *arg)
 					{
 						if (PixelBase_NextRequestCommand(queueItem.itemPoint, queueItem.command))
 						{
-							if (!taskQueueAddCommand(queueItem.itemPoint, queueItem.command, TimeoutMs))
+							while (!taskQueueAddCommand(queueItem.itemPoint, queueItem.command, TimeoutMs))
 							{
-								DebugBreak();
+								delayMs(1);
 							}
 						}
 					}
 					break;
 
 				default:
-					DebugBreak();
+					taskQueueAddCommandResend(queueItem.itemPoint, pdMS_TO_TICKS(TimeoutMs));
 				}
 			}
 			else if (taskQueueItemIsResend(&queueItem))
@@ -204,7 +198,7 @@ void taskPoolFunction(void *arg)
 				PixelBase_SendRequestCommand(queueItem.itemPoint, queueItem.command);
 			}
 		}
-//		delayMs(1);
+		//		delayMs(1);
 	}
 }
 
@@ -250,7 +244,12 @@ bool taskQueueAddCommandResend(const TaskItemPoint itemPoint, uint32_t ms)
 	{
 		item.command[i] = 0x00;
 	}
-	return xQueueSend(taskQueueHandle[itemPoint->transmitHandle->master->index], &item, pdMS_TO_TICKS(ms)) == pdPASS;
+	if (xQueueSend(taskQueueHandle[itemPoint->transmitHandle->master->index], &item, pdMS_TO_TICKS(ms)) != pdPASS)
+	{
+		DebugBreak();
+		return false;
+	}
+	return true;
 }
 
 inline bool taskQueueItemIsTrigger(const TaskQueueItem *queueItem)
@@ -289,7 +288,12 @@ bool taskQueueAddCommandResendFromISR(const TaskItemPoint itemPoint, BaseType_t 
 	{
 		item.command[i] = 0x00;
 	}
-	return xQueueSendFromISR(taskQueueHandle[itemPoint->transmitHandle->master->index], &item, y) == pdTRUE;
+	if (xQueueSendFromISR(taskQueueHandle[itemPoint->transmitHandle->master->index], &item, y) == pdTRUE)
+	{
+		return true;
+	}
+	DebugBreak();
+	return false;
 }
 
 bool taskQueueItemIsResend(const TaskQueueItem *queueItem)
@@ -310,41 +314,39 @@ void testTask(void *arg)
 	uint8_t txt[64];
 	uint8_t data[ShortCommandBuffSize] = {0x05, 0x08, 0x01, 0x01, 0x00, 0x00, 0x00};
 	uint32_t i;
-	
-	
+
 	TaskQueueItem item;
 
 	MX_FATFS_Init();
 
-	FatfsApi_Error(f_mount(&SDFatFS, SDPath, 1));
-	
-//	taskQueueAddCommand(pixelBaseList[0], data, pdMS_TO_TICKS(1));
+	f_mount(&SDFatFS, SDPath, 1);
 
-//	for (i = 0; i < 0xffff; ++i)
-//	{
-//		bool ok = true;
-//		
-//		do
-//		{
-//			if (FatfsApi_Prepare(1))
-//			{
-//			}
-//			
-//			
-//		} while (!ok);
-//	}
+	//	taskQueueAddCommand(pixelBaseList[0], data, pdMS_TO_TICKS(1));
+
+	//	for (i = 0; i < 0xffff; ++i)
+	//	{
+	//		bool ok = true;
+	//
+	//		do
+	//		{
+	//			if (FatfsApi_Prepare(1))
+	//			{
+	//			}
+	//
+	//
+	//		} while (!ok);
+	//	}
 	sprintf(txt, "%d\n", pdMS_TO_TICKS(1));
 	while (true)
 	{
 		UartDriver_PrepareForTransmit(uartDriverList[0], Transmit, TimeoutMs);
-		
+
 		UartDriver_Transmit(uartDriverList[0], txt, strlen(txt), HAL_TimeoutMs);
-		
+
 		UartDriver_EndTransmit(uartDriverList[0], Transmit);
-		
-//		HAL_SPI_Transmit(&hspi5, "hello\n", 6, 10);
+
+		//		HAL_SPI_Transmit(&hspi5, "hello\n", 6, 10);
 		delayMs(1000);
-	
 	}
 }
 
@@ -374,7 +376,7 @@ void vApplicationTickHook(void)
 			else
 			{
 				taskQueueAddTriggerFromISR(*(pixelBaseList + i), &y);
-				
+
 				PixelBase_SetNeedAnswer(*(pixelBaseList + i), false);
 				if (yield != pdTRUE && y == pdTRUE)
 				{

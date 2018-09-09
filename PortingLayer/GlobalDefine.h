@@ -4,7 +4,7 @@
 // stm32f427
 
 //#define TEST
-//#define USE_Debug
+#define USE_Debug
 
 #ifdef STM32F427xx
 #include <stm32f4xx_hal.h>
@@ -21,8 +21,6 @@
 #define UartCounter 2
 #endif
 
-
-
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -34,7 +32,6 @@
 
 #define USE_FatfsThread
 
-
 #define TimeoutMs 10
 
 #define HAL_TimeoutMs 10
@@ -44,7 +41,7 @@
 #define TaskPoolPriority 1
 
 #define MainTaskPriority 2
-#define MainTaskStackDepth (1024 / 4)
+#define MainTaskStackDepth (2 * 1024 / 4)
 
 #define TaskQueueLength 20
 
@@ -54,13 +51,11 @@
 
 #define PixelBaseFileFragmentSize_KB 32
 
-
 #ifdef USE_RTOS
 #define delayMs(ms) vTaskDelay(pdMS_TO_TICKS(ms))
 #else
 #define delayMs(ms) HAL_Delay(ms)
 #endif
-
 
 #ifdef USE_Debug
 #define DebugBreak() __breakpoint(0)

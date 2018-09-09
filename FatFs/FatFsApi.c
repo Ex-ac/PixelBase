@@ -1,9 +1,10 @@
 #include "FatfsApi.h"
 #include <rtc.h>
+#include <usart.h>
 
 static char dirPath[DirPathWidth];
 
-inline bool Fatfs_Open(FIL *fp, const TCHAR *path, BYTE mode)
+inline bool FatfsApi_Open(FIL *fp, const TCHAR *path, BYTE mode)
 {
 	uint8_t ret;
 	ret = f_open(fp, path, mode);
@@ -80,7 +81,7 @@ inline bool Fatfs_Open(FIL *fp, const TCHAR *path, BYTE mode)
 	return false;
 }
 
-inline bool Fatfs_Lseek(FIL *fp, FSIZE_t ofs)
+inline bool FatfsApi_Lseek(FIL *fp, FSIZE_t ofs)
 {
 	uint8_t ret = f_lseek(fp, ofs);
 	switch (ret)
@@ -155,7 +156,7 @@ inline bool Fatfs_Lseek(FIL *fp, FSIZE_t ofs)
 	return false;
 }
 
-inline bool Fatfs_Write(FIL *fp, const void *buff, UINT btw, UINT *bw)
+inline bool FatfsApi_Write(FIL *fp, const void *buff, UINT btw, UINT *bw)
 {
 	uint8_t ret = f_write(fp, buff, btw, bw);
 
@@ -231,7 +232,7 @@ inline bool Fatfs_Write(FIL *fp, const void *buff, UINT btw, UINT *bw)
 	return false;
 }
 
-inline bool Fatfs_Close(FIL *fp)
+inline bool FatfsApi_Close(FIL *fp)
 {
 	uint8_t ret = f_close(fp);
 
@@ -310,8 +311,7 @@ inline bool Fatfs_Close(FIL *fp)
 inline bool FatfsApi_MkDir(const char *path)
 {
 	uint8_t ret = f_mkdir(path);
-	
-	
+
 	switch (ret)
 	{
 	case FR_OK:
@@ -382,7 +382,6 @@ inline bool FatfsApi_MkDir(const char *path)
 		break;
 	}
 	return false;
-	
 }
 
 #ifdef USE_FatfsThread
@@ -409,17 +408,18 @@ void FatfsThread_Init(void)
 	// {
 	// 	*(controlBlockAddress + i) = (uint8_t)(MemaryPoolFlage_Free);
 	// }
-	MX_FATFS_Init();
 
-	if (f_mount(&SDFatFS, SDPath, 1) != FR_OK)
+	fatfsThreadQueue = xQueueCreate(1, sizeof(FatfsThreadQueueItem));
+
+	if (fatfsThreadQueue == NULL)
 	{
 		DebugBreak();
 	}
 
-	fatfsThreadQueue = xQueueCreate(1, sizeof(FatfsThreadQueueItem));
-
-
-	xTaskCreate(FatfsThread_TaskFunction, NULL, FatfsThreadTaskPriority, NULL, FatfsThreadTaskPriority, NULL);
+	if (xTaskCreate(FatfsThread_TaskFunction, NULL, FatfsThreadTaskStackDepth, NULL, FatfsThreadTaskPriority, NULL) != pdPASS)
+	{
+		DebugBreak();
+	}
 }
 bool FatfsThread_AddCreateSaveDirCommand(const RTC_TimeTypeDef *time, const RTC_DateTypeDef *date, uint32_t ms)
 {
@@ -479,6 +479,14 @@ void FatfsThread_TaskFunction(void *arg)
 	PixelBase *pixelBase;
 	bool ok;
 	uint32_t count;
+
+	MX_FATFS_Init();
+
+	if (f_mount(&SDFatFS, SDPath, 1) != FR_OK)
+	{
+		DebugBreak();
+	}
+
 	while (true)
 	{
 		if (xQueueReceive(fatfsThreadQueue, (void *)(&item), pdMS_TO_TICKS(1000)) == pdPASS)
@@ -512,7 +520,7 @@ void FatfsThread_TaskFunction(void *arg)
 					}
 				}
 
-				do 
+				do
 				{
 					ok = true;
 
@@ -540,11 +548,10 @@ void FatfsThread_TaskFunction(void *arg)
 						delayMs(1);
 					}
 				} while (!ok);
-
 			}
 			else
 			{
-				uint32_t subSeconds = (uint32_t)(item.data[9] + item.data[8] << 8 + item.data[7] << 16 + item.data[6] << 24);
+				uint32_t subSeconds = (uint32_t)(item.data[9]) + (uint32_t)(item.data[8] << 8) + (uint32_t)(item.data[7] << 16) + (uint32_t)(item.data[6] << 24);
 
 				sprintf(dirPath, "%2d%2d%2d_%2d%2d%2d%3d", item.data[0], item.data[1], item.data[2], item.data[3], item.data[4], item.data[5], subSeconds);
 
@@ -621,11 +628,6 @@ void FatfsApi_End()
 #else
 	isUse = false;
 #endif
-}
-
-bool FatfsApi_Error(uint8_t ret)
-{
-	return true;
 }
 
 #endif
