@@ -91,13 +91,12 @@ void mainTaskFunction(void *arg)
 	
 	
 	TaskQueueItem item;
-
-//	MX_FATFS_Init();
-
-//	f_mount(&SDFatFS, SDPath, 1);
 	
-
-
+	
+	
+	
+	
+	
 	for (uint8_t i = 0; i < PixelBaseCounter; ++i)
 	{
 		taskQueueAddCommand(pixelBaseList[i], data2, pdMS_TO_TICKS(1));
@@ -107,21 +106,23 @@ void mainTaskFunction(void *arg)
 	HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
 	HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
 
+	
+	
 	while (!FatfsThread_AddCreateSaveDirCommand(&time, &date, 1))
 	{
 		delayMs(1);
 	}
+	
+	
 	for (uint8_t i = 0; i < PixelBaseCounter; ++i)
 	{
 		taskQueueAddCommand(pixelBaseList[i], data, pdMS_TO_TICKS(1));
 	}
-//	taskQueueAddCommand(pixelBaseList[20], data, pdMS_TO_TICKS(1));
-//	taskQueueAddCommand(pixelBaseList[10], data, pdMS_TO_TICKS(1));
+
 	
 	while (true)
 	{
 		
-//		HAL_SPI_Transmit(&hspi5, "hello\n", 6, 10);
 		delayMs(1000);
 	}
 }
@@ -316,7 +317,7 @@ void testTask(void *arg)
 
 	MX_FATFS_Init();
 
-	FatfsApi_Error(f_mount(&SDFatFS, SDPath, 1));
+	f_mount(&SDFatFS, SDPath, 1);
 	
 //	taskQueueAddCommand(pixelBaseList[0], data, pdMS_TO_TICKS(1));
 

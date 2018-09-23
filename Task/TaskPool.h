@@ -1,12 +1,8 @@
 #ifndef TASKPOOL_H_
 #define TASKPOOL_H_
 
-
 #include <stdbool.h>
 #include <stdint.h>
-
-
-
 
 #include "../PortingLayer/GlobalDefine.h"
 #include "../PortingLayer/PortingLayer.h"
@@ -24,7 +20,6 @@
 #define TaskPoolPriority 2
 #endif
 
-
 #ifndef MainTaskStackDepth
 #define MainTaskStackDepth (1024 / 4)
 #endif
@@ -33,13 +28,8 @@
 #define TaskQueueLength (PixelBaseCounter * 2)
 #endif
 
-
 #define TaskQueueItemCommandLength ShortCommandBuffSize
-typedef PixelBase* TaskItemPoint;
-
-
-
-
+typedef PixelBase *TaskItemPoint;
 
 extern QueueHandle_t taskQueueHandle[TaskPoolCounter];
 
@@ -53,14 +43,10 @@ typedef struct TagQueueTaskItem
 void taskInit(void);
 void mainTaskFunction(void *arg);
 
-
 void createTaskPool(void);
-void taskPoolFunction(void * arg);
-
-
+void taskPoolFunction(void *arg);
 
 bool taskQueueGetItem(uint8_t index, TaskQueueItem *item, uint32_t ms);
-
 
 bool taskQueueAddTrigger(const TaskItemPoint itemPoint, uint32_t ms);
 bool taskQueueAddTriggerFromISR(const TaskItemPoint itemPoint, BaseType_t *y);
@@ -75,6 +61,5 @@ bool taskQueueItemIsResend(const TaskQueueItem *queueItem);
 void testTask(void *arg);
 
 void vApplicationTickHook(void);
-
 
 #endif

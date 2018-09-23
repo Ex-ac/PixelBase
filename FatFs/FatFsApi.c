@@ -3,7 +3,7 @@
 
 static char dirPath[DirPathWidth];
 
-inline bool Fatfs_Open(FIL *fp, const TCHAR *path, BYTE mode)
+inline bool FatfsApi_Open(FIL *fp, const TCHAR *path, BYTE mode)
 {
 	uint8_t ret;
 	ret = f_open(fp, path, mode);
@@ -80,7 +80,7 @@ inline bool Fatfs_Open(FIL *fp, const TCHAR *path, BYTE mode)
 	return false;
 }
 
-inline bool Fatfs_Lseek(FIL *fp, FSIZE_t ofs)
+inline bool FatfsApi_Lseek(FIL *fp, FSIZE_t ofs)
 {
 	uint8_t ret = f_lseek(fp, ofs);
 	switch (ret)
@@ -155,7 +155,7 @@ inline bool Fatfs_Lseek(FIL *fp, FSIZE_t ofs)
 	return false;
 }
 
-inline bool Fatfs_Write(FIL *fp, const void *buff, UINT btw, UINT *bw)
+inline bool FatfsApi_Write(FIL *fp, const void *buff, UINT btw, UINT *bw)
 {
 	uint8_t ret = f_write(fp, buff, btw, bw);
 
@@ -231,7 +231,7 @@ inline bool Fatfs_Write(FIL *fp, const void *buff, UINT btw, UINT *bw)
 	return false;
 }
 
-inline bool Fatfs_Close(FIL *fp)
+inline bool FatfsApi_Close(FIL *fp)
 {
 	uint8_t ret = f_close(fp);
 
@@ -310,8 +310,7 @@ inline bool Fatfs_Close(FIL *fp)
 inline bool FatfsApi_MkDir(const char *path)
 {
 	uint8_t ret = f_mkdir(path);
-	
-	
+
 	switch (ret)
 	{
 	case FR_OK:
@@ -382,7 +381,6 @@ inline bool FatfsApi_MkDir(const char *path)
 		break;
 	}
 	return false;
-	
 }
 
 #ifdef USE_FatfsThread
@@ -393,33 +391,9 @@ static QueueHandle_t fatfsThreadQueue;
 // static uint8_t *controlBlockAddress;
 void FatfsThread_Init(void)
 {
-	// firstAddress = (uint8_t *)(pvPortMalloc(MaxSizeOfBuffByte * MemaryPoolSize));
-	// if (firstAddress == NULL)
-	// {
-	// 	DebugBreak();
-	// }
-
-	// controlBlockAddress = (uint8_t *)(pvPortMalloc(MemaryPoolSize));
-	// if (controlBlockAddress == NULL)
-	// {
-	// 	DebugBreak();
-	// }
-
-	// for (int32_t i = 0; i < MemaryPoolSize; ++i)
-	// {
-	// 	*(controlBlockAddress + i) = (uint8_t)(MemaryPoolFlage_Free);
-	// }
-	MX_FATFS_Init();
-
-	if (f_mount(&SDFatFS, SDPath, 1) != FR_OK)
-	{
-		DebugBreak();
-	}
-
 	fatfsThreadQueue = xQueueCreate(1, sizeof(FatfsThreadQueueItem));
 
-
-	xTaskCreate(FatfsThread_TaskFunction, NULL, FatfsThreadTaskPriority, NULL, FatfsThreadTaskPriority, NULL);
+	xTaskCreate(FatfsThread_TaskFunction, NULL, FatfsThreadTaskStackDepth, NULL, FatfsThreadTaskPriority, NULL);
 }
 bool FatfsThread_AddCreateSaveDirCommand(const RTC_TimeTypeDef *time, const RTC_DateTypeDef *date, uint32_t ms)
 {
@@ -479,6 +453,15 @@ void FatfsThread_TaskFunction(void *arg)
 	PixelBase *pixelBase;
 	bool ok;
 	uint32_t count;
+	FIL file;
+
+	MX_FATFS_Init();
+
+	if (f_mount(&SDFatFS, SDPath, 1) != FR_OK)
+	{
+		DebugBreak();
+	}
+
 	while (true)
 	{
 		if (xQueueReceive(fatfsThreadQueue, (void *)(&item), pdMS_TO_TICKS(1000)) == pdPASS)
@@ -512,25 +495,25 @@ void FatfsThread_TaskFunction(void *arg)
 					}
 				}
 
-				do 
+				do
 				{
 					ok = true;
 
-					if (ok && !FatfsApi_Open(&SDFile, path, FA_CREATE_ALWAYS | FA_WRITE))
+					if (ok && !FatfsApi_Open(&file, path, FA_CREATE_ALWAYS | FA_WRITE))
 					{
 						ok = false;
 					}
 
-					if (ok && !FatfsApi_Lseek(&SDFile, (pixelBase->packData.numberOfPack - 1) % PixelBaseFileFragmentSize_KB * 1024))
+					if (ok && !FatfsApi_Lseek(&file, (pixelBase->packData.numberOfPack - 1) % PixelBaseFileFragmentSize_KB * 1024))
 					{
 						ok = false;
 					}
 
-					if (ok && !FatfsApi_Write(&SDFile, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count))
+					if (ok && !FatfsApi_Write(&file, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count))
 					{
 						ok = false;
 					}
-					if (!FatfsApi_Close(&SDFile))
+					if (!FatfsApi_Close(&file))
 					{
 						ok = false;
 					}
@@ -540,11 +523,10 @@ void FatfsThread_TaskFunction(void *arg)
 						delayMs(1);
 					}
 				} while (!ok);
-
 			}
 			else
 			{
-				uint32_t subSeconds = (uint32_t)(item.data[9] + item.data[8] << 8 + item.data[7] << 16 + item.data[6] << 24);
+				uint32_t subSeconds = (uint32_t)(item.data[9]) + (uint32_t)(item.data[8] << 8) + (uint32_t)(item.data[7] << 16) + (uint32_t)(item.data[6] << 24);
 
 				sprintf(dirPath, "%2d%2d%2d_%2d%2d%2d%3d", item.data[0], item.data[1], item.data[2], item.data[3], item.data[4], item.data[5], subSeconds);
 

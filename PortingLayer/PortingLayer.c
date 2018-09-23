@@ -44,9 +44,7 @@ void createPixelBase()
 	PixelBase *pixelBase;
 	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(PixelBase)));
 	PixelBase_Init(pixelBase, 0, spiMasterList[0], GPIOA, GPIO_PIN_4, GPIOC, GPIO_PIN_4, uartDriverList[0]);
-
 }
-
 
 #else
 
@@ -54,11 +52,10 @@ void createPixelBase()
 void createPixelBase()
 {
 
-	SendToPCHandle *sendToPChandle = uartDriverList[0];
+	SendToPCHandle *sendToPChandle = uartDriverList[1];
 	PixelBase *pixelBase;
 
 	//spi5 0
-	
 
 	pixelBase = (PixelBase *)(pvPortMalloc(sizeof(PixelBase)));
 	PixelBase_Init(pixelBase, 0, spiMasterList[0], GPIOE, GPIO_PIN_2, GPIOE, GPIO_PIN_3, sendToPChandle);
@@ -220,7 +217,6 @@ void createPixelBase()
 }
 #endif
 
-
 #endif
 
 #ifdef STM32F427xx
@@ -241,4 +237,3 @@ void createUartDriver()
 	UartDriver_Init(uartDriver, &huart1, 0);
 }
 #endif
-

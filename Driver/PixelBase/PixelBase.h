@@ -29,7 +29,6 @@ extern "C"
 
 #endif
 
-
 #ifdef SendToPCByUartDriver
 #include "../UartDriver/UartDriver.h"
 	typedef UartDriver SendToPCHandle;
@@ -39,7 +38,6 @@ extern "C"
 #ifndef TimeoutMs
 #define TimeoutMs 1
 #endif
-
 
 	typedef uint16_t Zoom;
 
