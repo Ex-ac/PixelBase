@@ -6,6 +6,10 @@ extern "C"
 {
 #endif
 
+#ifdef USE_Debug
+extern char errorMsgBuff[128];
+#endif
+
 #include "../../Fatfs/FatfsApi.h"
 
 #include "../../PortingLayer/GlobalDefine.h"
@@ -25,18 +29,15 @@ extern "C"
 #ifdef TransmitBySpi
 
 #include "../SpiDriver/SpiDriver.h"
-	typedef SpiSlaver TransmitHandle;
 
+typedef SpiSlaver TransmitHandle;
 #endif
 
 #ifdef SendToPCByUartDriver
 #include "../UartDriver/UartDriver.h"
-	typedef UartDriver SendToPCHandle;
 
-#endif
+typedef UartDriver SendToPCHandle;
 
-#ifndef TimeoutMs
-#define TimeoutMs 1
 #endif
 
 	typedef uint16_t Zoom;
@@ -198,7 +199,6 @@ extern "C"
 
 	typedef struct TagPixelBase
 	{
-
 		uint8_t id;
 		uint8_t status;
 		uint8_t saveWay;
@@ -215,7 +215,6 @@ extern "C"
 		DriverInfo driverInfo;
 		PackData packData;
 
-		//pixelbase
 		TransmitHandle *transmitHandle;
 
 		GpioPin irqPin;

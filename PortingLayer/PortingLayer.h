@@ -13,4 +13,6 @@ void createPixelBase(void);
 void createSpiMaster(void);
 void createUartDriver(void);
 
+void Debug_Msg(const char *txt);
+
 #endif

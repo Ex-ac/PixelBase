@@ -50,7 +50,6 @@ extern "C"
 
     void FatfsThread_TaskFunction(void *arg);
 
-
 #else
 
 void FatfsApi_Init(void);
@@ -60,7 +59,6 @@ void FatfsApi_AddTask(PixelBase *pxielBase);
 bool FatfsApi_Prepare(uint32_t ms);
 void FatfsApi_End(void);
 
-bool FatfsApi_Error(uint8_t ret);
 
 #endif
 

@@ -1,8 +1,10 @@
 #include "PixelBase.h"
 
+#ifdef USE_Debug
+char errorMsgBuff[128];
+#endif
+
 PixelBase *pixelBaseList[PixelBaseCounter] = {0x00};
-
-
 
 #ifdef TransmitBySpi
 
@@ -184,7 +186,7 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 
 	if (temp != HAL_OK)
 	{
-//		DebugBreak();
+
 		TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 		return pixelBase->lastErrorCode = ErrorCode_DriverFaliureError;
 	}
@@ -193,7 +195,6 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 	{
 		if (data == 0)
 		{
-//			DebugBreak();
 			TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 			return pixelBase->lastErrorCode = ErrorCode_NeedDataBuff;
 		}
@@ -202,13 +203,12 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 			temp = PixelBase_GetLongByte(pixelBase, data, PixelBase_PackSize(pixelBase) - 8);
 			if (temp != HAL_OK)
 			{
-//				DebugBreak();
+
 				TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 				return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_DriverFaliureError);
 			}
 			if (!TransmitHandle_WaitForTransmit(pixelBase->transmitHandle, Receive, 10 * TimeoutMs))
 			{
-//				DebugBreak();
 			}
 			sum += PixelBase_CheckSum(data, PixelBase_PackSize(pixelBase) - 8);
 		}
@@ -217,7 +217,7 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 	temp = PixelBase_GetLast2Byte(pixelBase);
 	if (temp != HAL_OK)
 	{
-//		DebugBreak();
+
 		TransmitHandle_EndTransmit(pixelBase->transmitHandle, Receive);
 		return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_DriverFaliureError);
 	}
@@ -226,7 +226,7 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 
 	if (sum != *(pixelBase->receiveDataBuff + LongCommandBuffSize - 2))
 	{
-//		DebugBreak();
+
 		return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_CheckError);
 	}
 	PixelBase_SetNeedGetAnswer(pixelBase, false);
@@ -498,31 +498,31 @@ bool PixelBase_SendPackData(PixelBase *pixelBase)
 	{
 		do
 		{
+			ok = true;
 			if (ok && SendToPCHandle_PrepareForTransmit(pixelBase->sendToPCHandle, Transmit, 1))
 			{
 				if (ok && SendToPCHandle_Transmit(pixelBase->sendToPCHandle, str, strlen(str), 10 * HAL_TimeoutMs) != HAL_OK)
 				{
-
-//					DebugBreak();
 					SendToPCHandle_EndTransmit(pixelBase->sendToPCHandle, Transmit);
 					ok = false;
 				}
 
 				if (ok && !SendToPCHandle_WaitForTransmit(pixelBase->sendToPCHandle, Transmit, TimeoutMs))
 				{
-//					DebugBreak();
 					SendToPCHandle_EndTransmit(pixelBase->sendToPCHandle, Transmit);
 					ok = false;
 				}
 
-				if (ok)
-				{
-					SendToPCHandle_EndTransmit(pixelBase->sendToPCHandle, Transmit);
-				}
+				SendToPCHandle_EndTransmit(pixelBase->sendToPCHandle, Transmit);
 			}
 			else
 			{
-				delayMs(TimeoutMs);
+				ok = false;
+			}
+			
+			if (!ok)
+			{
+				delayMs(1);
 			}
 		} while (!ok);
 	}
@@ -646,7 +646,7 @@ bool PixelBase_SavePackData(PixelBase *pixelBase)
 	// 		{
 	// 			ok = false;
 	// 		}
-			
+
 	// 		if (FatfsApi_Close(&SDFile) != FR_OK)
 	// 		{
 	// 			ok = false;
@@ -659,7 +659,7 @@ bool PixelBase_SavePackData(PixelBase *pixelBase)
 	// 	{
 	// 		ok = false;
 	// 	}
-		
+
 	// 	if (!ok)
 	// 	{
 	// 		delayMs(1);

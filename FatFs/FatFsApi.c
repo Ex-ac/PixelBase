@@ -1,5 +1,6 @@
 #include "FatfsApi.h"
 #include <rtc.h>
+#include <usart.h>
 
 static char dirPath[DirPathWidth];
 
@@ -552,14 +553,11 @@ void FatfsThread_TaskFunction(void *arg)
 					delayMs(1);
 				}
 			}
-//			delayMs(1);
 		}
 	}
 }
 
-// bool MemaryPool_Create();
-// uint8_t *MemaryPool_Request();
-// void MemaryPool_Release(uint8_t *data);
+
 
 #else
 
@@ -613,11 +611,6 @@ void FatfsApi_End()
 #else
 	isUse = false;
 #endif
-}
-
-bool FatfsApi_Error(uint8_t ret)
-{
-	return true;
 }
 
 #endif

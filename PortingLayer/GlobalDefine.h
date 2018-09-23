@@ -41,7 +41,10 @@
 #define TaskPoolPriority 1
 
 #define MainTaskPriority 2
+
 #define MainTaskStackDepth 1024
+
+
 
 #define TaskQueueLength 20
 

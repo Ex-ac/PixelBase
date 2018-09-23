@@ -237,3 +237,34 @@ void createUartDriver()
 	UartDriver_Init(uartDriver, &huart1, 0);
 }
 #endif
+
+void Debug_Msg(const char *txt)
+{
+#ifdef USE_Debug
+	bool ok;
+	do
+	{
+		ok = true;
+		if (UartDriver_PrepareForTransmit(uartDriverList[0], Transmit, 1))
+		{
+			if (UartDriver_Transmit(uartDriverList[0], txt, strlen(txt), 100 * HAL_TimeoutMs) != HAL_OK)
+			{
+				ok = false;
+			}
+			UartDriver_EndTransmit(uartDriverList[0], Transmit);
+		}
+		else
+		{
+			ok = false;
+		}
+
+		if (!ok)
+		{
+			delayMs(1);
+		}
+	} while (!ok);
+
+#else
+	__NOP;
+#endif
+}
