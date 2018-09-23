@@ -102,7 +102,6 @@ void mainTaskFunction(void *arg)
 		taskQueueAddCommand(pixelBaseList[i], data2, pdMS_TO_TICKS(1));
 	}
 	delayMs(1000);
-	
 	HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
 	HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
 

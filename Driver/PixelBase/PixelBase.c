@@ -226,7 +226,7 @@ uint8_t PixelBase_GetAnswer(PixelBase *pixelBase, uint8_t *data)
 
 	if (sum != *(pixelBase->receiveDataBuff + LongCommandBuffSize - 2))
 	{
-		DebugBreak();
+//		DebugBreak();
 		return pixelBase->lastErrorCode = (uint8_t)(ErrorCode_CheckError);
 	}
 	PixelBase_SetNeedGetAnswer(pixelBase, false);

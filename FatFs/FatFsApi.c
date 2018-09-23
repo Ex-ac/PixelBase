@@ -503,16 +503,25 @@ void FatfsThread_TaskFunction(void *arg)
 					{
 						ok = false;
 					}
-
+					if (ok && (pixelBase->packData.numberOfPack - 1) % PixelBaseFileFragmentSize_KB == 0)
+					{
+						if (!FatfsApi_Lseek(&file, PixelBaseFileFragmentSize_KB * 1024))
+						{
+							ok = false;
+						}
+					}
 					if (ok && !FatfsApi_Lseek(&file, (pixelBase->packData.numberOfPack - 1) % PixelBaseFileFragmentSize_KB * 1024))
 					{
 						ok = false;
 					}
-
-					if (ok && !FatfsApi_Write(&file, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count))
+					do 
 					{
-						ok = false;
-					}
+						count = 0;
+						if (ok && !FatfsApi_Write(&file, pixelBase->packData.data, pixelBase->packData.sizeOfByte, &count))
+						{
+							ok = false;
+						}
+					} while(ok && pixelBase->packData.sizeOfByte != count);
 					if (!FatfsApi_Close(&file))
 					{
 						ok = false;
@@ -543,6 +552,7 @@ void FatfsThread_TaskFunction(void *arg)
 					delayMs(1);
 				}
 			}
+//			delayMs(1);
 		}
 	}
 }
