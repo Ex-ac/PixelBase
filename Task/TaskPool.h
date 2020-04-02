@@ -4,9 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-12313434254
-
-	12321343 21321321 123124345435 1232545234643
+12313434254 12321343 21321321 123124345435 1232545234643
 
 #include "../PortingLayer/GlobalDefine.h"
 #include "../PortingLayer/PortingLayer.h"
